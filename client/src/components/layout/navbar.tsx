@@ -27,9 +27,6 @@ export function Navbar() {
             <Link href="/features">
               <a className="hover:text-foreground transition-colors">Features</a>
             </Link>
-            <Link href="/pricing">
-              <a className="hover:text-foreground transition-colors">Pricing</a>
-            </Link>
           </div>
 
           <div className="flex items-center gap-3">
