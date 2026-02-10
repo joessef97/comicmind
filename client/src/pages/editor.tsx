@@ -2,262 +2,238 @@ import { useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ComicPanel } from "@/components/editor/comic-panel";
-import { 
-  Sparkles, 
-  LayoutGrid, 
-  Save, 
-  Share2, 
-  ChevronRight, 
-  Plus, 
-  User, 
-  MessageSquare,
-  Wand2,
-  Download,
-  RefreshCw,
-  X,
-  Languages,
-  Eye,
-  Settings
-} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  ChevronRight, 
+  BookOpen, 
+  PenTool, 
+  Palette, 
+  ArrowRight, 
+  ArrowLeft,
+  Sparkles,
+  AlertTriangle,
+  Wand2
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
-// Mock data for the editor state
-const DEFAULT_PANELS = Array(6).fill(null).map((_, i) => ({
-  id: `panel-${i}`,
-  prompt: "",
-  image: i < 3 ? `/comic-panel-sample_${i+1}.jpg` : undefined, 
-  dialogue: i === 0 ? [{ id: "d1", text: "The target is in sight.", x: 50, y: 20 }] : [],
-  narration: i === 0 ? "A cold night in Neo-Tokyo." : ""
-}));
+type Step = "title" | "story" | "style";
+
+const ART_STYLES = [
+  { id: "anime", name: "Anime", icon: "🎌", description: "Japanese animation style with expressive characters" },
+  { id: "realistic", name: "Realistic", icon: "📷", description: "Life-like detail and natural lighting" },
+  { id: "cartoon", name: "Cartoon", icon: "🎨", description: "Bold lines and vibrant, playful colors" },
+  { id: "noir", name: "Noir", icon: "🌑", description: "High-contrast black and white cinematic style" },
+  { id: "watercolor", name: "Watercolor", icon: "💧", description: "Soft textures and fluid artistic strokes" },
+  { id: "retro", name: "Retro", icon: "🎪", description: "Classic vintage comic book aesthetic" },
+];
 
 export default function Editor() {
-  const [panels, setPanels] = useState(DEFAULT_PANELS);
-  const [selectedPanelIndex, setSelectedPanelIndex] = useState<number | null>(0);
-  const [storyPremise, setStoryPremise] = useState("A cyberpunk detective hunting a rogue android in the neon slums of Neo-Tokyo.");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [, setLocation] = useLocation();
+  const [step, setStep] = useState<Step>("title");
+  const [title, setTitle] = useState("");
+  const [premise, setPremise] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState("anime");
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-    }, 2000);
-  };
-
-  const selectedPanel = selectedPanelIndex !== null ? panels[selectedPanelIndex] : null;
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center gap-4 mb-12">
+      <div className={cn(
+        "flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300",
+        step === "title" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground"
+      )}>
+        <BookOpen className="w-4 h-4" />
+        <span className="text-sm font-bold">Title</span>
+      </div>
+      <div className="h-px w-8 bg-white/10" />
+      <div className={cn(
+        "flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300",
+        step === "story" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground"
+      )}>
+        <PenTool className="w-4 h-4" />
+        <span className="text-sm font-bold">Story</span>
+      </div>
+      <div className="h-px w-8 bg-white/10" />
+      <div className={cn(
+        "flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300",
+        step === "style" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground"
+      )}>
+        <Palette className="w-4 h-4" />
+        <span className="text-sm font-bold">Style</span>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden text-foreground">
+    <div className="min-h-screen bg-[#0f1115] text-foreground font-sans selection:bg-primary/30">
       <Navbar />
       
-      {/* Editor Toolbar */}
-      <div className="h-14 border-b border-white/5 bg-card/50 flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Project</span>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-foreground font-medium">ComicMind: Story Studio</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="hover:bg-white/5">
-            <Save className="w-4 h-4 mr-2" /> Save
-          </Button>
-          <Button variant="ghost" size="sm" className="hover:bg-white/5">
-            <Languages className="w-4 h-4 mr-2" /> Localization
-          </Button>
-          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Download className="w-4 h-4 mr-2" /> Export Comic
-          </Button>
-        </div>
-      </div>
+      <main className="container max-w-2xl mx-auto px-4 py-16">
+        {renderStepIndicator()}
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* LEFT SIDEBAR: Creation Workflow */}
-        <div className="w-80 border-r border-white/5 bg-card/30 flex flex-col shrink-0">
-          <Tabs defaultValue="story" className="flex-1 flex flex-col">
-            <div className="px-4 pt-4">
-              <TabsList className="w-full bg-background/50 grid grid-cols-2">
-                <TabsTrigger value="story" className="text-xs">Story Beats</TabsTrigger>
-                <TabsTrigger value="characters" className="text-xs">Characters</TabsTrigger>
-              </TabsList>
+        <div className="bg-[#161920] border border-white/5 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          
+          {step === "title" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="text-center space-y-2">
+                <h1 className="text-4xl font-display font-bold tracking-tight">Name Your Comic</h1>
+                <p className="text-muted-foreground">Give your comic a memorable title</p>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-bold text-muted-foreground">Comic Title</Label>
+                <div className="relative">
+                  <Input 
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter title..."
+                    className="h-14 bg-[#1c202a] border-white/5 focus:border-primary/50 text-lg px-4 transition-all"
+                  />
+                  <div className="absolute right-4 bottom-[-24px] text-[10px] text-muted-foreground font-mono">
+                    {title.length}/50
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => setStep("story")}
+                disabled={!title}
+                className="w-full h-14 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 transition-all font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+              >
+                Continue <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
             </div>
+          )}
 
-            <TabsContent value="story" className="flex-1 overflow-hidden m-0">
-              <ScrollArea className="h-full">
-                <div className="p-4 space-y-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">User Premise</Label>
-                    </div>
-                    <Textarea 
-                      value={storyPremise}
-                      onChange={(e) => setStoryPremise(e.target.value)}
-                      placeholder="Enter your story idea..."
-                      className="min-h-[100px] text-sm bg-background/50 border-white/10"
-                    />
-                    <Button 
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
-                      className="w-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+          {step === "story" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="text-center space-y-2">
+                <h1 className="text-4xl font-display font-bold tracking-tight">Tell Your Story</h1>
+                <p className="text-muted-foreground">Describe the plot of your 6-panel comic</p>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-bold text-muted-foreground">Story Premise</Label>
+                <div className="relative">
+                  <Textarea 
+                    value={premise}
+                    onChange={(e) => setPremise(e.target.value)}
+                    placeholder="Once upon a time..."
+                    className="min-h-[160px] bg-[#1c202a] border-white/5 focus:border-primary/50 text-base p-4 resize-none transition-all"
+                  />
+                  <div className="absolute right-4 bottom-[-24px] text-[10px] text-muted-foreground font-mono">
+                    {premise.length}/500
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                  <Sparkles className="w-4 h-4" />
+                  Tips for a great story
+                </div>
+                <ul className="text-xs text-muted-foreground space-y-2 list-disc list-inside">
+                  <li>Include a clear beginning, conflict, and resolution</li>
+                  <li>Describe key characters and their motivations</li>
+                  <li>Keep it concise - 6 panels go quickly!</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep("title")}
+                  className="flex-1 h-14 border-white/5 hover:bg-white/5 font-bold"
+                >
+                  <ArrowLeft className="mr-2 w-5 h-5" /> Back
+                </Button>
+                <Button 
+                  onClick={() => setStep("style")}
+                  disabled={!premise}
+                  className="flex-[2] h-14 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 transition-all font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+                >
+                  Continue <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "style" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="text-center space-y-2">
+                <h1 className="text-4xl font-display font-bold tracking-tight">Choose Your Style</h1>
+                <p className="text-muted-foreground">Select the visual style for your comic</p>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-sm font-bold text-muted-foreground">Art Style</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {ART_STYLES.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setSelectedStyle(s.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all group",
+                        selectedStyle === s.id 
+                          ? "bg-primary/10 border-primary shadow-lg shadow-primary/10" 
+                          : "bg-[#1c202a] border-white/5 hover:border-white/10"
+                      )}
                     >
-                      {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-2" /> Generate Panels</>}
-                    </Button>
-                  </div>
-
-                  <Separator className="bg-white/5" />
-
-                  <div className="space-y-4">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Narrative Flow</Label>
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="group p-3 rounded-lg border border-white/5 bg-background/40 hover:border-primary/40 transition-all cursor-pointer">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-bold text-primary">BEAT 0{i}</span>
-                          <Eye className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">Scene {i} description automatically generated from premise...</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="characters" className="flex-1 overflow-hidden m-0">
-              <ScrollArea className="h-full">
-                <div className="p-4 space-y-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Character Control</Label>
-                      <Button variant="ghost" size="icon" className="h-6 w-6"><Plus className="w-3 h-3" /></Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 rounded-lg border border-primary/40 bg-primary/5 flex flex-col items-center gap-2">
-                         <div className="w-12 h-12 rounded-full bg-indigo-500 border-2 border-primary" />
-                         <span className="text-xs font-bold">Detective</span>
-                      </div>
-                      <div className="p-3 rounded-lg border border-white/5 bg-background/40 flex flex-col items-center gap-2 grayscale hover:grayscale-0 transition-all cursor-pointer">
-                         <div className="w-12 h-12 rounded-full bg-emerald-500" />
-                         <span className="text-xs font-bold">The Hacker</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* CENTER: Comic Canvas */}
-        <div className="flex-1 bg-[#0f1115] relative overflow-hidden flex flex-col">
-          <ScrollArea className="flex-1">
-            <div className="min-h-full p-12 flex items-center justify-center">
-              <div className="w-full max-w-5xl bg-white p-6 shadow-2xl shadow-black/50">
-                <div className="grid grid-cols-3 grid-rows-2 gap-4">
-                  {panels.map((panel, index) => (
-                    <ComicPanel
-                      key={panel.id}
-                      index={index}
-                      image={panel.image}
-                      isSelected={selectedPanelIndex === index}
-                      onSelect={() => setSelectedPanelIndex(index)}
-                      dialogue={panel.dialogue}
-                    />
+                      <span className="text-2xl grayscale group-hover:grayscale-0 transition-all">{s.icon}</span>
+                      <span className={cn(
+                        "text-xs font-bold",
+                        selectedStyle === s.id ? "text-primary" : "text-muted-foreground"
+                      )}>{s.name}</span>
+                    </button>
                   ))}
                 </div>
               </div>
-            </div>
-          </ScrollArea>
-          
-          <div className="h-12 border-t border-white/5 bg-card/30 flex items-center justify-between px-6 text-[10px] font-medium text-muted-foreground uppercase tracking-widest">
-             <div className="flex items-center gap-6">
-               <span className="text-primary font-bold">6-Panel Comic Mode</span>
-               <span>Character Consistency: 98%</span>
-             </div>
-             <div className="flex items-center gap-4">
-               <span>Resolution: 4K (Post-processed)</span>
-             </div>
-          </div>
-        </div>
 
-        {/* RIGHT SIDEBAR: SVG Post-Processing */}
-        <div className="w-80 border-l border-white/5 bg-card/30 flex flex-col shrink-0">
-          <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider">Panel Configuration</h3>
-              <p className="text-[10px] text-muted-foreground">SVG Speech Bubbles & Narratives</p>
-            </div>
-            <Settings className="w-4 h-4 text-muted-foreground" />
-          </div>
-          
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-6">
-              {selectedPanel ? (
-                <>
-                  <div className="space-y-3">
-                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Visual Prompt</Label>
-                    <div className="p-3 rounded-lg bg-background/50 border border-white/5 text-[11px] leading-relaxed text-muted-foreground">
-                      Deterministic prompt for Character consistency...
-                    </div>
-                    <Button variant="outline" size="sm" className="w-full text-[10px] border-white/10 hover:bg-white/5">
-                      <RefreshCw className="w-3 h-3 mr-2" /> Sync Consistency
-                    </Button>
-                  </div>
-
-                  <Separator className="bg-white/5" />
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">SVG Bubbles</Label>
-                      <Button variant="ghost" size="sm" className="h-6 text-[10px] text-primary">
-                        <Plus className="w-3 h-3 mr-1" /> Add Layer
-                      </Button>
-                    </div>
-                    
-                    {selectedPanel.dialogue.map((bubble, i) => (
-                      <div key={bubble.id} className="p-3 rounded-lg bg-background/50 border border-primary/20 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-primary">DIALOGUE {i+1}</span>
-                          <X className="w-3 h-3 text-muted-foreground hover:text-destructive cursor-pointer" />
-                        </div>
-                        <Textarea 
-                          defaultValue={bubble.text}
-                          className="min-h-[60px] text-xs bg-background/30 border-white/5"
-                        />
-                        <div className="flex items-center gap-2">
-                           <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full bg-primary w-1/2" />
-                           </div>
-                           <span className="text-[10px] text-muted-foreground">X: {bubble.x}% Y: {bubble.y}%</span>
-                        </div>
-                      </div>
-                    ))}
-
-                    <div className="space-y-2">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Narration Layer</Label>
-                       <Input 
-                        placeholder="Add narrative text..."
-                        className="h-8 text-xs bg-background/50"
-                        defaultValue={selectedPanel.narration}
-                       />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground opacity-30">
-                  <LayoutGrid className="w-12 h-12 mb-4" />
-                  <p className="text-xs font-bold uppercase tracking-widest">Select Panel</p>
+              <div className="bg-[#1c1218] border border-[#ff0080]/10 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-[#ff0080] font-bold text-sm">
+                  <AlertTriangle className="w-4 h-4" />
+                  Content Guidelines
                 </div>
-              )}
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Our AI ensures all generated content is family-friendly. Violent, explicit, or harmful content will be filtered automatically.
+                </p>
+              </div>
+
+              <div className="bg-[#1c202a] border border-white/5 rounded-xl p-6 space-y-4">
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Your Comic Summary</h3>
+                <div className="space-y-2">
+                  <div className="flex gap-2 text-sm">
+                    <span className="text-muted-foreground font-medium">Title:</span>
+                    <span className="font-bold">{title}</span>
+                  </div>
+                  <div className="flex gap-2 text-sm">
+                    <span className="text-muted-foreground font-medium">Style:</span>
+                    <span className="font-bold">{ART_STYLES.find(s => s.id === selectedStyle)?.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic line-clamp-2 mt-2">"{premise}"</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep("story")}
+                  className="flex-1 h-14 border-white/5 hover:bg-white/5 font-bold"
+                >
+                  <ArrowLeft className="mr-2 w-5 h-5" /> Back
+                </Button>
+                <Button 
+                  className="flex-[2] h-14 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 transition-all font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+                >
+                  <Wand2 className="mr-2 w-5 h-5" /> Generate Comic
+                </Button>
+              </div>
             </div>
-          </ScrollArea>
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
