@@ -29,11 +29,6 @@ export default function Features() {
             description="Input a simple premise, and our AI constructs a coherent 6-panel storyboard with beginning, conflict, and resolution."
           />
           <FeatureCard 
-            icon={<Globe className="w-6 h-6 text-emerald-500" />}
-            title="Localization Ready"
-            description="Since text is separate from artwork, you can translate your comics into multiple languages with a single click."
-          />
-          <FeatureCard 
             icon={<Shield className="w-6 h-6 text-rose-500" />}
             title="Content Safety"
             description="Built-in filters ensure all generated content remains family-friendly and follows safety guidelines."
