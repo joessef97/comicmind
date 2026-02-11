@@ -21,7 +21,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <Link href="/dashboard">
               <a className={`hover:text-foreground transition-colors ${location === "/dashboard" ? "text-foreground" : ""}`}>
-                Library
+                Gallery
               </a>
             </Link>
             <Link href="/features">
