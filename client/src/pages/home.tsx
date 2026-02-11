@@ -15,11 +15,6 @@ export default function Home() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 space-y-8 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <Zap className="w-3 h-3" />
-                <span>AI-Powered Storyboarding V1.0</span>
-              </div>
-              
               <h1 className="text-5xl lg:text-7xl font-display font-bold leading-[1.1] tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/60 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
                 Create Consistent <br />
                 <span className="text-primary">Comic Books</span>
