@@ -11,7 +11,7 @@ export function Navbar() {
         <Link href="/">
           <a className="flex items-center gap-2 group">
             <img 
-              src="/attached_assets/ComicMind_logo_with_futuristic_robot_1770804922159.png" 
+              src="/assets/logo.png" 
               alt="ComicMind Logo" 
               className="w-10 h-10 rounded-lg object-cover"
             />
