@@ -1,0 +1,20 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"/>
+      <stop offset="1" stop-color="#1A1434"/>
+    </linearGradient>
+    <linearGradient id="cta" x1="260" y1="540" x2="930" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#bg)"/>
+  <rect x="280" y="120" width="640" height="460" rx="24" fill="#171E31" stroke="#2C3552"/>
+  <text x="600" y="190" fill="#F8FAFC" font-size="54" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700">Name Your Comic</text>
+  <text x="600" y="228" fill="#94A3B8" font-size="24" text-anchor="middle" font-family="Arial, sans-serif">Give your comic a memorable title</text>
+  <rect x="330" y="280" width="540" height="72" rx="14" fill="#0F1426" stroke="#7C3AED" stroke-width="2"/>
+  <text x="355" y="325" fill="#E2E8F0" font-size="27" font-family="Arial, sans-serif">The Last Rune Bearer</text>
+  <rect x="330" y="500" width="540" height="60" rx="15" fill="url(#cta)"/>
+  <text x="600" y="538" fill="#FFFFFF" font-size="28" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700">Continue</text>
+</svg>

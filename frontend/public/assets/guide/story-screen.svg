@@ -1,0 +1,25 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A0F1E"/>
+      <stop offset="1" stop-color="#1A1536"/>
+    </linearGradient>
+    <linearGradient id="cta" x1="600" y1="570" x2="940" y2="570" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#bg)"/>
+  <rect x="250" y="90" width="700" height="520" rx="24" fill="#171E31" stroke="#2C3552"/>
+  <text x="600" y="170" fill="#F8FAFC" font-size="56" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700">Tell Your Story</text>
+  <text x="600" y="212" fill="#94A3B8" font-size="24" text-anchor="middle" font-family="Arial, sans-serif">Describe the plot of your 6-panel comic</text>
+  <rect x="290" y="260" width="620" height="180" rx="14" fill="#0F1426" stroke="#7C3AED" stroke-width="2"/>
+  <text x="320" y="304" fill="#E2E8F0" font-size="23" font-family="Arial, sans-serif">A forgotten warrior discovers he carries the final rune...</text>
+  <rect x="290" y="465" width="620" height="95" rx="14" fill="#1B2237" stroke="#36415F"/>
+  <text x="320" y="507" fill="#C084FC" font-size="22" font-family="Arial, sans-serif" font-weight="700">Tips for a great story</text>
+  <circle cx="430" cy="570" r="8" fill="#7C3AED"/>
+  <rect x="260" y="540" width="300" height="60" rx="15" fill="#0E1529" stroke="#2C3552"/>
+  <text x="410" y="578" fill="#CBD5E1" font-size="26" text-anchor="middle" font-family="Arial, sans-serif">Back</text>
+  <rect x="600" y="540" width="340" height="60" rx="15" fill="url(#cta)"/>
+  <text x="770" y="578" fill="#FFFFFF" font-size="26" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700">Continue</text>
+</svg>
