@@ -1,0 +1,338 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Comic Book Reader — Realistic open-book styles
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Book wrapper ─────────────────────────────────────────────────── */
+.comic-book {
+  perspective: 2000px;
+  perspective-origin: 50% 50%;
+}
+
+/* ── Paper texture overlay (subtle noise) ─────────────────────────── */
+.page-paper {
+  background-color: #faf6ee;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23faf6ee'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23f5f0e4' opacity='0.4'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23ede8da' opacity='0.3'/%3E%3C/svg%3E");
+  background-size: 4px 4px;
+}
+
+/* ── Center fold / spine ─────────────────────────────────────────── */
+.book-spine {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 4px;
+  height: 100%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.12) 20%,
+    rgba(0, 0, 0, 0.22) 45%,
+    rgba(0, 0, 0, 0.28) 50%,
+    rgba(0, 0, 0, 0.22) 55%,
+    rgba(0, 0, 0, 0.12) 80%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Wider gradient shadow around the spine */
+.book-spine::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -30px;
+  width: 64px;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.04) 25%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.04) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* ── Page inner shadow (left page right edge, right page left edge) */
+.page-left {
+  box-shadow:
+    inset -20px 0 30px -15px rgba(0, 0, 0, 0.08),
+    0 4px 30px rgba(0, 0, 0, 0.25);
+  border-radius: 6px 0 0 6px;
+}
+
+.page-right {
+  box-shadow:
+    inset 20px 0 30px -15px rgba(0, 0, 0, 0.08),
+    0 4px 30px rgba(0, 0, 0, 0.25);
+  border-radius: 0 6px 6px 0;
+}
+
+/* ── Page turn container ─────────────────────────────────────────── */
+.page-flip-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  z-index: 50;
+}
+
+.page-flip-front,
+.page-flip-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+
+.page-flip-front {
+  z-index: 2;
+}
+
+.page-flip-back {
+  transform: rotateY(180deg);
+  z-index: 1;
+}
+
+/* ── Dynamic page-flip shadow ─────────────────────────────────────── */
+.page-flip-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 60;
+}
+
+/* ── Page curl hint on hover ──────────────────────────────────────── */
+.page-curl-hint {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    rgba(0, 0, 0, 0.04) 50%,
+    rgba(255, 255, 255, 0.4) 55%,
+    rgba(250, 246, 238, 1) 60%
+  );
+  border-radius: 0 0 6px 0;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.page-right:hover .page-curl-hint {
+  opacity: 1;
+}
+
+/* ── Panel layouts inside a page ──────────────────────────────────── */
+.page-panels {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* 1 panel – full page */
+.page-panels.layout-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+/* 2 panels – top big, bottom small  */
+.page-panels.layout-2a {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1.3fr 0.7fr;
+}
+
+/* 2 panels – side by side */
+.page-panels.layout-2b {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+/* 3 panels – one wide top, two stacked bottom */
+.page-panels.layout-3a {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.page-panels.layout-3a > :first-child {
+  grid-column: 1 / -1;
+}
+
+/* 3 panels – two small top, one wide bottom */
+.page-panels.layout-3b {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.page-panels.layout-3b > :last-child {
+  grid-column: 1 / -1;
+}
+
+/* 4 panels – classic 2×2 grid */
+.page-panels.layout-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* ── Panel styling ────────────────────────────────────────────────── */
+.book-panel {
+  position: relative;
+  border: 2.5px solid #111;
+  overflow: hidden;
+  cursor: pointer;
+  background: #111;
+  min-height: 0;
+  min-width: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.book-panel:hover {
+  z-index: 5;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.book-panel img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #111;
+}
+
+/* ── Page numbers ─────────────────────────────────────────────────── */
+.page-number {
+  position: absolute;
+  bottom: 8px;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.35);
+  font-family: serif;
+  pointer-events: none;
+  user-select: none;
+}
+
+.page-number-left {
+  left: 16px;
+}
+
+.page-number-right {
+  right: 16px;
+}
+
+/* ── Zoom overlay ─────────────────────────────────────────────────── */
+.panel-zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  backdrop-filter: blur(4px);
+}
+
+.panel-zoom-overlay img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 8px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Mobile (single-page mode) ────────────────────────────────────── */
+@media (max-width: 767px) {
+  .page-left {
+    border-radius: 6px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+  }
+  .page-right {
+    border-radius: 6px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+  }
+  .book-spine {
+    display: none;
+  }
+}
+
+/* ── Navigation buttons ───────────────────────────────────────────── */
+.book-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 100;
+  backdrop-filter: blur(6px);
+}
+
+.book-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.book-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: translateY(-50%);
+}
+
+.book-nav-btn-prev {
+  left: -56px;
+}
+
+.book-nav-btn-next {
+  right: -56px;
+}
+
+@media (max-width: 1100px) {
+  .book-nav-btn-prev {
+    left: 4px;
+  }
+  .book-nav-btn-next {
+    right: 4px;
+  }
+}
+
+@media (max-width: 767px) {
+  .book-nav-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .book-nav-btn-prev {
+    left: 4px;
+  }
+  .book-nav-btn-next {
+    right: 4px;
+  }
+}
