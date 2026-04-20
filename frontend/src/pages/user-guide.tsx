@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import { useEffect } from "react";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
@@ -78,36 +77,6 @@ export default function UserGuide() {
 
     return `/login?returnTo=${encodeURIComponent(checkoutPath)}`;
   };
-
-  useEffect(() => {
-    const scrollToHashTarget = () => {
-      const pendingPackagesScroll = sessionStorage.getItem("scrollToPackages") === "1";
-      const hash = window.location.hash;
-      const id = pendingPackagesScroll
-        ? "packages"
-        : hash
-          ? decodeURIComponent(hash.replace("#", ""))
-          : "";
-
-      if (!id) return;
-      const target = document.getElementById(id);
-      if (!target) return;
-
-      const y = target.getBoundingClientRect().top + window.scrollY - 90;
-      window.scrollTo({ top: y, behavior: "smooth" });
-
-      if (pendingPackagesScroll) {
-        sessionStorage.removeItem("scrollToPackages");
-      }
-    };
-
-    scrollToHashTarget();
-    window.addEventListener("hashchange", scrollToHashTarget);
-
-    return () => {
-      window.removeEventListener("hashchange", scrollToHashTarget);
-    };
-  }, []);
 
   return (
     <PageLayout className="bg-background text-foreground">
@@ -306,7 +275,7 @@ export default function UserGuide() {
             </Card>
           </section>
 
-          <section id="packages" aria-labelledby="packages-heading" className="space-y-6">
+          <section id="packages" aria-labelledby="packages-heading" className="space-y-6 scroll-mt-24">
             <h2 id="packages-heading" className="text-2xl md:text-3xl font-display font-semibold text-center">
               Packages
             </h2>

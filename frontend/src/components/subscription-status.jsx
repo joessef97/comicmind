@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 
 export default function SubscriptionStatus() {
   const [, setLocation] = useLocation();
@@ -105,16 +106,15 @@ export default function SubscriptionStatus() {
     <section className="mt-4 rounded-xl border border-border bg-muted/40 p-5 shadow-sm transition-all hover:shadow-md">
       <h3 className="text-lg font-semibold text-foreground">No Active Subscription</h3>
       <p className="mt-1 text-sm text-muted-foreground">You are not subscribed.</p>
-      <button
+      <Button
         type="button"
+        className="mt-4 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         onClick={() => {
-          sessionStorage.setItem("scrollToPackages", "1");
           setLocation("/user-guide#packages");
         }}
-        className="mt-4 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         Subscribe Now
-      </button>
+      </Button>
     </section>
   );
 }
