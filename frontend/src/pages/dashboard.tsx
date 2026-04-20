@@ -30,6 +30,16 @@ interface Draft {
 
 type TabType = "all" | "comics" | "drafts";
 
+interface DashboardViewStateCache {
+  comics: Comic[];
+  drafts: Draft[];
+  activeTab: TabType;
+  previewAspectRatios: Record<string, string>;
+  scrollY: number;
+}
+
+let dashboardViewStateCache: DashboardViewStateCache | null = null;
+
 const STYLE_GRADIENTS: Record<string, string> = {
   anime: "bg-gradient-to-br from-purple-900 to-indigo-900",
   realistic: "bg-gradient-to-br from-slate-800 to-gray-900",
@@ -65,11 +75,13 @@ const STATUS_BADGES: Record<string, { label: string; className: string; icon: Re
 export default function Dashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [comics, setComics] = useState<Comic[]>([]);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [previewAspectRatios, setPreviewAspectRatios] = useState<Record<string, string>>({});
+  const [comics, setComics] = useState<Comic[]>(() => dashboardViewStateCache?.comics ?? []);
+  const [drafts, setDrafts] = useState<Draft[]>(() => dashboardViewStateCache?.drafts ?? []);
+  const [isLoading, setIsLoading] = useState(() => !dashboardViewStateCache);
+  const [activeTab, setActiveTab] = useState<TabType>(() => dashboardViewStateCache?.activeTab ?? "all");
+  const [previewAspectRatios, setPreviewAspectRatios] = useState<Record<string, string>>(
+    () => dashboardViewStateCache?.previewAspectRatios ?? {},
+  );
 
   const fetchData = async () => {
     try {
@@ -96,6 +108,32 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    dashboardViewStateCache = {
+      comics,
+      drafts,
+      activeTab,
+      previewAspectRatios,
+      scrollY: window.scrollY,
+    };
+  }, [comics, drafts, activeTab, previewAspectRatios]);
+
+  useEffect(() => {
+    if (!dashboardViewStateCache) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: dashboardViewStateCache?.scrollY ?? 0, behavior: "auto" });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  const handleSubscribeNow = () => {
+    setLocation("/user-guide#packages");
+  };
 
   const handleDeleteComic = async (e: React.MouseEvent, comicId: string) => {
     e.preventDefault();
@@ -158,11 +196,16 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Manage your comic projects and drafts.</p>
             <SubscriptionStatus />
           </div>
-          <Link href="/editor/new">
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" /> New Comic
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleSubscribeNow}>
+              Subscribe Now
             </Button>
-          </Link>
+            <Link href="/editor/new">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-2" /> New Comic
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Tabs */}
