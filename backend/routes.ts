@@ -617,6 +617,15 @@ export async function registerRoutes(
       const offset = Math.max(parseInt(String(_req.query.offset) || "0"), 0);
       const comics = await storage.getAllComicsPublic(limit, offset);
 
+      // Batch-fetch author usernames for all comics
+      const uniqueUserIds = Array.from(new Set(comics.map((c) => c.userId)));
+      const authorUsers = await Promise.all(uniqueUserIds.map((uid) => storage.getUser(uid)));
+      const authorMap = new Map(
+        authorUsers
+          .filter((u): u is NonNullable<typeof u> => !!u)
+          .map((u) => [u.id, u.username])
+      );
+
       // Batch-fetch rating + comment counts for each comic
       const enriched = await Promise.all(
         comics.map(async (c) => {
@@ -626,6 +635,7 @@ export async function registerRoutes(
           ]);
           return {
             ...c,
+            authorUsername: authorMap.get(c.userId) || "Unknown",
             ratingsCount: ratingInfo.count,
             commentsCount: commentInfo.total,
           };

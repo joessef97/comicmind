@@ -539,8 +539,18 @@ export async function getPublicComics(req: AuthRequest, res: Response) {
       (commentStats as any[]).map((row) => [String(row._id), row.count ?? 0]),
     );
 
+    // Batch-fetch author usernames
+    const uniqueUserIds = Array.from(new Set(comics.map((c) => c.userId)));
+    const authorUsers = uniqueUserIds.length
+      ? await UserModel.find({ _id: { $in: uniqueUserIds } }).select("username").lean()
+      : [];
+    const authorMap = new Map(
+      authorUsers.map((u: any) => [u._id.toString(), u.username as string]),
+    );
+
     const enriched = comics.map((c) => ({
       ...c,
+      authorUsername: authorMap.get(c.userId) || "Unknown",
       ratingsCount: ratingMap.get(c.id)?.count ?? 0,
       averageRating: ratingMap.get(c.id)?.average ?? 0,
       commentsCount: commentMap.get(c.id) ?? 0,
