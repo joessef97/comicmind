@@ -14,6 +14,7 @@ interface PublicComic {
   idea: string;
   panels: any[];
   createdAt: string;
+  authorUsername: string;
   ratingsCount: number;
   commentsCount: number;
   shares: number;
@@ -159,6 +160,10 @@ export default function BrowsePage() {
                     <h3 className="text-xl font-bold font-display group-hover:text-primary transition-colors mb-1">
                       {comic.title}
                     </h3>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                      <User className="w-3 h-3" />
+                      <span>{comic.authorUsername}</span>
+                    </div>
                     <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
                       {comic.idea}
                     </p>
