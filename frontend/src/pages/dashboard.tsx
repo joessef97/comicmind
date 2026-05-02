@@ -82,12 +82,16 @@ export default function Dashboard() {
   const [previewAspectRatios, setPreviewAspectRatios] = useState<Record<string, string>>(
     () => dashboardViewStateCache?.previewAspectRatios ?? {},
   );
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   const fetchData = async () => {
     try {
-      const [comicsRes, draftsRes] = await Promise.all([
+      const token = localStorage.getItem("token");
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+      const [comicsRes, draftsRes, subRes] = await Promise.all([
         apiRequest("GET", "/api/comics?limit=50"),
         apiRequest("GET", "/api/drafts?limit=50"),
+        fetch("/api/user/subscription", { method: "GET", headers: authHeaders, credentials: "include" }),
       ]);
       const comicsData = await comicsRes.json();
       const draftsData = await draftsRes.json();
@@ -98,6 +102,10 @@ export default function Dashboard() {
             d.status !== "COMPLETED" && !(d.status === "GENERATING" && (!d.panels || d.panels.length === 0)),
         ),
       );
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setIsSubscribed(!!subData.isActive);
+      }
     } catch (error: any) {
       toast({ title: "Failed to load projects", description: error.message, variant: "destructive" });
     } finally {
@@ -197,9 +205,11 @@ export default function Dashboard() {
             <SubscriptionStatus />
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={handleSubscribeNow}>
-              Subscribe Now
-            </Button>
+            {!isSubscribed && (
+              <Button variant="outline" onClick={handleSubscribeNow}>
+                Subscribe Now
+              </Button>
+            )}
             <Link href="/editor/new">
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus className="w-4 h-4 mr-2" /> New Comic
