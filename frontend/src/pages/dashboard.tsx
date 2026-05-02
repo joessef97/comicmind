@@ -86,12 +86,10 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
       const [comicsRes, draftsRes, subRes] = await Promise.all([
         apiRequest("GET", "/api/comics?limit=50"),
         apiRequest("GET", "/api/drafts?limit=50"),
-        fetch("/api/user/subscription", { method: "GET", headers: authHeaders, credentials: "include" }),
+        apiRequest("GET", "/api/user/subscription"),
       ]);
       const comicsData = await comicsRes.json();
       const draftsData = await draftsRes.json();
@@ -102,10 +100,8 @@ export default function Dashboard() {
             d.status !== "COMPLETED" && !(d.status === "GENERATING" && (!d.panels || d.panels.length === 0)),
         ),
       );
-      if (subRes.ok) {
-        const subData = await subRes.json();
-        setIsSubscribed(!!subData.isActive);
-      }
+      const subData = await subRes.json();
+      setIsSubscribed(!!subData.isActive);
     } catch (error: any) {
       toast({ title: "Failed to load projects", description: error.message, variant: "destructive" });
     } finally {
