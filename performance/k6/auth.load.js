@@ -5,52 +5,60 @@ import { postJson, ROUTES, stableBenchmarkCredentials } from "./common.js";
 // This counter helps count unexpected auth failures beyond the built-in K6 metrics.
 const unexpectedAuthFailures = new Counter("unexpected_auth_failures");
 
+function seededEmail(username) {
+  const envKey = `K6_USER_EMAIL_${username.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}`;
+  return __ENV[envKey] || `${username}@example.test`;
+}
+
 const SEEDED_USERS = [
   {
     username: __ENV.K6_AUTH_USERNAME || "",
     password: __ENV.K6_AUTH_PASSWORD || "",
+    email: __ENV.K6_AUTH_EMAIL || "benchmark@example.test",
   },
   {
     username: "youssef",
-    email: "youssef.hassan@gmail.com",
+    email: seededEmail("youssef"),
     password: "12345678",
   },
   {
     username: "sara",
-    email: "sara.nabil@gmail.com",
+    email: seededEmail("sara"),
     password: "12345678",
   },
   {
     username: "ahmed",
-    email: "ahmed.farouk@gmail.com",
+    email: seededEmail("ahmed"),
     password: "12345678",
   },
   {
     username: "mona",
-    email: "mona.salem@gmail.com",
+    email: seededEmail("mona"),
     password: "12345678",
   },
   {
     username: "alex_art",
-    email: "alex@comicmind.dev",
+    email: seededEmail("alex_art"),
     password: "Password1!",
   },
   {
     username: "samira_k",
-    email: "samira@comicmind.dev",
+    email: seededEmail("samira_k"),
     password: "Password2!",
   },
   {
     username: "jordan_draws",
-    email: "jordan@comicmind.dev",
+    email: seededEmail("jordan_draws"),
     password: "Password3!",
   },
   {
     username: "priya_m",
-    email: "priya@comicmind.dev",
+    email: seededEmail("priya_m"),
     password: "Password4!",
   },
 ];
+
+// Real credentials should come from env vars or be seeded locally.
 
 export const options = {
   scenarios: {

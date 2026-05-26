@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import crypto from "crypto";
 import type { ImageProvider, ImageGenerationMeta } from "./image-provider";
 import { getOpenAIImageService } from "./openai-image-service";
+import { getBannedTokensForPrompt } from "../utils/content-filter";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -49,6 +50,8 @@ export function getImageProvider(): ImageProvider {
 }
 
 export async function generateStory(title: string, idea: string, style: string, userId?: string): Promise<StoryResult> {
+  const bannedWordsPrompt = getBannedTokensForPrompt();
+
   const prompt = `You are a professional comic-book writer and visual director creating a 6-panel story
 for an AI image generator (gpt-image-2).
 
@@ -244,10 +247,7 @@ You MUST NEVER use ANY of these words (or their variants) in dialogue,
 narration, or panel descriptions. This is a hard platform rule — using
 any of them will cause the comic to be rejected by the content filter.
 
-BANNED WORDS: kill, murder, suicide, bomb, violence, massacre, genocide,
-assassination, gore, torture, dismember, behead, terrorist, terrorism,
-explicit, porn, hentai, nude, naked, sex, orgasm, fuck,
-cocaine, heroin, meth, fentanyl, drug dealing, self-harm
+BANNED WORDS: ${bannedWordsPrompt}
 
 Instead use softer alternatives:
 - "kill" → "stop", "defeat", "end", "destroy"
