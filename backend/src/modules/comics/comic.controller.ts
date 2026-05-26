@@ -90,7 +90,7 @@ export async function generateStoryHandler(req: AuthRequest, res: Response) {
       return res.status(400).json({ message: "Title, idea, and style are required" });
     }
 
-    const storyResult = await generateStory(title, idea, style);
+    const storyResult = await generateStory(title, idea, style, req.userId);
 
     // If the user's input was Arabic, translate user-facing text back.
     // We intentionally keep `description` in English for better image generation quality.
@@ -479,8 +479,8 @@ export async function createComic(req: AuthRequest, res: Response) {
 
 export async function getComics(req: AuthRequest, res: Response) {
   try {
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit) || "10"), 1), 100);
-    const offset = Math.max(parseInt(String(req.query.offset) || "0"), 0);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "10"), 10), 1), 100);
+    const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10), 0);
 
     const comics = await storage.getComicsByUser(req.userId!, limit, offset);
 
@@ -497,8 +497,8 @@ export async function getComics(req: AuthRequest, res: Response) {
 
 export async function getPublicComics(req: AuthRequest, res: Response) {
   try {
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit) || "20"), 1), 100);
-    const offset = Math.max(parseInt(String(req.query.offset) || "0"), 0);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "20"), 10), 1), 100);
+    const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10), 0);
     const cacheKey = `${limit}:${offset}`;
     const cached = publicListCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
@@ -511,21 +511,21 @@ export async function getPublicComics(req: AuthRequest, res: Response) {
     const [ratingStats, commentStats] = await Promise.all([
       comicIds.length
         ? RatingModel.aggregate([
-            { $match: { comicId: { $in: comicIds } } },
-            {
-              $group: {
-                _id: "$comicId",
-                average: { $avg: "$value" },
-                count: { $sum: 1 },
-              },
+          { $match: { comicId: { $in: comicIds } } },
+          {
+            $group: {
+              _id: "$comicId",
+              average: { $avg: "$value" },
+              count: { $sum: 1 },
             },
-          ])
+          },
+        ])
         : Promise.resolve([]),
       comicIds.length
         ? CommentModel.aggregate([
-            { $match: { comicId: { $in: comicIds } } },
-            { $group: { _id: "$comicId", count: { $sum: 1 } } },
-          ])
+          { $match: { comicId: { $in: comicIds } } },
+          { $group: { _id: "$comicId", count: { $sum: 1 } } },
+        ])
         : Promise.resolve([]),
     ]);
 

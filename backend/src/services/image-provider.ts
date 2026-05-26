@@ -23,7 +23,7 @@ export interface ImageGenerationRequest {
   characterSheet?: string;
   /**
    * Character reference image buffer. When provided, the image service
-   * uses `images.edit` so gpt-image-1 can "see" the character design
+   * uses `images.edit` so gpt-image-2 can "see" the character design
    * and replicate it in every panel.
    */
   referenceImage?: Buffer;
@@ -32,14 +32,14 @@ export interface ImageGenerationRequest {
 export interface ImageGenerationResult {
   /** Public / temporary URL of the generated image (empty for base64-only models) */
   imageUrl: string;
-  /** Raw image data as a Buffer — returned by gpt-image-1 (base64 models) */
+  /** Raw image data as a Buffer — returned by gpt-image-2 (base64 models) */
   imageBuffer?: Buffer;
   /** Metadata about the generation – persisted alongside the panel */
   meta: ImageGenerationMeta;
 }
 
 export interface ImageGenerationMeta {
-  /** Provider model identifier (e.g. "gpt-image-1") */
+  /** Provider model identifier (e.g. "gpt-image-2") */
   model: string;
   /** The final prompt that was sent to the provider */
   prompt: string;

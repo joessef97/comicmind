@@ -1,8 +1,8 @@
 /**
  * OpenAI Image Service — implements ImageProvider using the
- * OpenAI Images API (gpt-image-1).
+ * OpenAI Images API (gpt-image-2).
  *
- * Uses gpt-image-1 which:
+ * Uses gpt-image-2 which:
  *   - Does NOT internally rewrite prompts → much better character consistency
  *   - Returns base64 data (b64_json) instead of temporary URLs
  *   - Supports "low", "medium", "high" quality
@@ -28,7 +28,7 @@ const STYLE_PROMPTS: Record<string, string> = {
     "classic vintage comic book aesthetic, halftone dots, retro 1960s colors, bold outlines",
 };
 
-/** Rough cost per image for gpt-image-1 at medium quality / 1024×1024 */
+/** Rough cost per image for gpt-image-2 at medium quality / 1024×1024 */
 const COST_ESTIMATE_USD = 0.04;
 
 export class OpenAIImageService implements ImageProvider {
@@ -36,7 +36,7 @@ export class OpenAIImageService implements ImageProvider {
   private client: OpenAI;
   private model: string;
 
-  constructor(apiKey?: string, model = "gpt-image-1") {
+  constructor(apiKey?: string, model = "gpt-image-2") {
     const key = apiKey || process.env.OPENAI_API_KEY;
     if (!key) {
       throw new Error(
@@ -56,7 +56,7 @@ export class OpenAIImageService implements ImageProvider {
 
     // ── Build the prompt ─────────────────────────────────────────
     //
-    // gpt-image-1 does NOT rewrite prompts internally, so the exact
+    // gpt-image-2 does NOT rewrite prompts internally, so the exact
     // text we send is what drives the generation. This gives us much
     // better character consistency when we repeat the same character
     // description across panels.
@@ -98,10 +98,10 @@ export class OpenAIImageService implements ImageProvider {
 
       if (req.referenceImage) {
         // ── Reference-based generation via images.edit ────────────
-        // gpt-image-1 can accept a reference image so it can "see"
+        // gpt-image-2 can accept a reference image so it can "see"
         // the character design and replicate face/hair/outfit exactly.
         console.log(
-          `[gpt-image-1] Panel ${req.panelNumber ?? "?"}: using character reference image (${(req.referenceImage.length / 1024).toFixed(0)} KB)`,
+          `[gpt-image-2] Panel ${req.panelNumber ?? "?"}: using character reference image (${(req.referenceImage.length / 1024).toFixed(0)} KB)`,
         );
 
         const refFile = await toFile(req.referenceImage, "character-ref.png", {
@@ -188,7 +188,7 @@ export class OpenAIImageService implements ImageProvider {
       if (b64) {
         imageBuffer = Buffer.from(b64, "base64");
         console.log(
-          `[gpt-image-1] Panel ${req.panelNumber ?? "?"}: received ${(imageBuffer.length / 1024).toFixed(0)} KB image`,
+          `[gpt-image-2] Panel ${req.panelNumber ?? "?"}: received ${(imageBuffer.length / 1024).toFixed(0)} KB image`,
         );
       } else if (!imageUrl) {
         throw new Error("No image URL or base64 data in OpenAI response");
@@ -244,7 +244,7 @@ let _instance: OpenAIImageService | null = null;
 
 export function getOpenAIImageService(): OpenAIImageService {
   if (!_instance) {
-    _instance = new OpenAIImageService(undefined, "gpt-image-1");
+    _instance = new OpenAIImageService(undefined, "gpt-image-2");
   }
   return _instance;
 }

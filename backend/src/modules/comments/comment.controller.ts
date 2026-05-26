@@ -29,8 +29,8 @@ export async function addComment(req: AuthRequest, res: Response) {
 export async function getComments(req: Request, res: Response) {
   try {
     const comicId = String(req.params.id);
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit) || "20"), 1), 100);
-    const page = Math.max(parseInt(String(req.query.page) || "1"), 1);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "20"), 10), 1), 100);
+    const page = Math.max(parseInt(String(req.query.page ?? "1"), 10), 1);
 
     const result = await storage.getCommentsByComic(comicId, limit, page);
     return res.status(200).json({ ...result, limit, page });

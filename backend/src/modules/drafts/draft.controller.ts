@@ -24,8 +24,8 @@ export async function createDraft(req: AuthRequest, res: Response) {
 
 export async function getDrafts(req: AuthRequest, res: Response) {
   try {
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit) || "50"), 1), 100);
-    const offset = Math.max(parseInt(String(req.query.offset) || "0"), 0);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10), 1), 100);
+    const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10), 0);
 
     const drafts = await storage.getDraftsByUser(req.userId!, limit, offset);
 

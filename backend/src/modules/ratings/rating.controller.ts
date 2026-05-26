@@ -45,8 +45,8 @@ export async function getRatingSummary(req: Request, res: Response) {
 export async function getRatings(req: Request, res: Response) {
   try {
     const comicId = String(req.params.id);
-    const limit = Math.min(Math.max(parseInt(String(req.query.limit) || "20"), 1), 100);
-    const page = Math.max(parseInt(String(req.query.page) || "1"), 1);
+    const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "20"), 10), 1), 100);
+    const page = Math.max(parseInt(String(req.query.page ?? "1"), 10), 1);
     const result = await storage.getRatingsWithUserByComic(comicId, limit, page);
     return res.status(200).json({ ...result, limit, page });
   } catch (error) {
