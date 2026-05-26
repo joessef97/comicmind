@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import crypto from "crypto";
 import type { ImageProvider, ImageGenerationMeta } from "./image-provider";
 import { getOpenAIImageService } from "./openai-image-service";
 
@@ -47,9 +48,9 @@ export function getImageProvider(): ImageProvider {
   return getOpenAIImageService();
 }
 
-export async function generateStory(title: string, idea: string, style: string): Promise<StoryResult> {
+export async function generateStory(title: string, idea: string, style: string, userId?: string): Promise<StoryResult> {
   const prompt = `You are a professional comic-book writer and visual director creating a 6-panel story
-for an AI image generator (gpt-image-1).
+for an AI image generator (gpt-image-2).
 
 ── INPUTS ──────────────────────────────────────────────
 Title: ${title}
@@ -150,7 +151,7 @@ Full dialogue example:
    PILLAR 2: VISUAL CONSISTENCY  (Co-Equal Priority)
 ══════════════════════════════════════════════════════════
 
-CRITICAL CONSTRAINT: gpt-image-1 has ZERO MEMORY between panels. The ONLY way
+CRITICAL CONSTRAINT: gpt-image-2 has ZERO MEMORY between panels. The ONLY way
 to maintain character consistency is to include the EXACT SAME detailed visual
 description in EVERY panel. This is non-negotiable.
 
@@ -235,6 +236,34 @@ CRITICAL:
   ]
 }
 
+══════════════════════════════════════════════════════════
+   CONTENT SAFETY  (Mandatory)
+══════════════════════════════════════════════════════════
+
+You MUST NEVER use ANY of these words (or their variants) in dialogue,
+narration, or panel descriptions. This is a hard platform rule — using
+any of them will cause the comic to be rejected by the content filter.
+
+BANNED WORDS: kill, murder, suicide, bomb, violence, massacre, genocide,
+assassination, gore, torture, dismember, behead, terrorist, terrorism,
+explicit, porn, hentai, nude, naked, sex, orgasm, fuck,
+cocaine, heroin, meth, fentanyl, drug dealing, self-harm
+
+Instead use softer alternatives:
+- "kill" → "stop", "defeat", "end", "destroy"
+- "murder" → "crime", "foul play"
+- "suicide" → "sacrifice", "last resort"
+- "bomb" → "blast", "explosion", "device"
+- "violence" → "danger", "conflict", "struggle"
+- "gore" → "chaos", "aftermath"
+- "torture" → "torment", "suffering"
+- "assassination" → "attack", "ambush"
+- "explicit" → "intense", "raw"
+
+This applies to ALL text output — dialogue, narration, and descriptions.
+You can still tell dramatic, intense, emotional stories. Just use the
+alternative words above.
+
 ── FINAL CHECKLIST ─────────────────────────────────────
 □ Story has clear CONFLICT, SURPRISE, and EMOTIONAL ARC
 □ Reading narration P1-P6 alone tells a complete, gripping story
@@ -245,11 +274,20 @@ CRITICAL:
 □ Every panel COPY-PASTES the full character tag list
 □ Every panel has a different camera angle, pose, and expression
 □ Panel descriptions are 60-100 words
+□ NO banned words appear anywhere in the output
 □ Output is valid JSON with no markdown wrapping`;
 
   try {
+    // Hash the userId before sending to OpenAI so raw internal IDs are
+    // never exposed to a third-party API.  Falls back to "anonymous" for
+    // unauthenticated edge-cases (should not happen behind authenticateToken).
+    const openaiUser = userId
+      ? crypto.createHash("sha256").update(userId).digest("hex")
+      : "anonymous";
+
     const response = await openai.chat.completions.create({
       model: "gpt-4",
+      user: openaiUser,
       messages: [
         {
           role: "system",
@@ -366,10 +404,10 @@ You ALWAYS return ONLY valid JSON. No markdown code fences. No explanatory text.
 }
 
 /**
- * Generate a character reference sheet image using gpt-image-1.
+ * Generate a character reference sheet image using gpt-image-2.
  *
  * This produces a full-body, neutral-pose illustration of the main character
- * so that gpt-image-1 receives the exact same visual anchor across all panels.
+ * so that gpt-image-2 receives the exact same visual anchor across all panels.
  * The reference image is stored alongside the comic and can be displayed to
  * the user during generation.
  */
@@ -381,10 +419,10 @@ export async function generateCharacterReference(
   const provider = getImageProvider();
 
   // Build the character reference prompt from the user's template
-  const mainChar = characterSheet.characters[0];
+  const mainChar = characterSheet.characters?.[0];
   const charDescription = mainChar
     ? `${mainChar.name}: ${mainChar.appearance}`
-    : characterSheet.description;
+    : characterSheet.description || "A distinctive comic book character";
 
   const STYLE_PROMPTS: Record<string, string> = {
     anime: "anime style, manga artwork, cel-shaded",

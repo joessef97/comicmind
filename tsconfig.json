@@ -6,7 +6,6 @@
     "strict": false,
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["frontend/src/*"],
       "@shared/*": ["shared/*"],

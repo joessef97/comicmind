@@ -6,11 +6,19 @@
   "scripts": {
     "dev:frontend": "vite dev",
     "dev": "cross-env NODE_ENV=development node --env-file=.env --import tsx/esm backend/src/server.ts",
+    "dev:benchmark": "cross-env NODE_ENV=development BENCHMARK_MODE=true node --env-file=.env --import tsx/esm backend/src/server.ts",
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "test": "vitest run",
+    "test:api": "vitest run tests/api",
     "test:watch": "vitest",
+    "perf:install": "pwsh -File script/install-k6.ps1",
+    "perf:auth": "node script/run-k6.mjs run performance/k6/auth.load.js",
+    "perf:comic-generation": "node script/run-k6.mjs run performance/k6/comic-generation.load.js",
+    "perf:fetch-comics": "node script/run-k6.mjs run performance/k6/fetch-comics.load.js",
+    "perf:delete-comic": "node script/run-k6.mjs run performance/k6/delete-comic.load.js",
+    "perf:all": "npm run perf:auth && npm run perf:comic-generation && npm run perf:fetch-comics && npm run perf:delete-comic",
     "seed:demo": "node --env-file=.env --import tsx/esm script/seed-demo.ts"
   },
   "dependencies": {
@@ -91,17 +99,19 @@
     "@types/node": "^20.19.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/supertest": "^7.2.0",
     "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
     "esbuild": "^0.25.0",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.6",
+    "supertest": "^7.2.2",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
     "vite": "^7.1.9",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.7"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

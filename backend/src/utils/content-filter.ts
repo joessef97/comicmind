@@ -38,11 +38,11 @@ function normaliseLeet(text: string): string {
 const BANNED_PATTERNS = [
   // Violence / weapons
   "\\bviolence\\b",
-  "\\bkill\\b",
-  "\\bmurder\\b",
+  "\\bkill\\w*\\b",
+  "\\bmurder\\w*\\b",
   "\\bsuicide\\b",
   "\\bbomb\\b",
-  "\\bterror\\w*\\b",
+  "\\bterroris[mt]\\w*\\b",
   "\\bmassacre\\b",
   "\\bgenocide\\b",
   "\\bassassination\\b",

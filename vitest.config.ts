@@ -5,7 +5,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["**/*.test.ts"],
+    include: ["tests/**/*.test.ts"],
+    setupFiles: ["./tests/setup.ts"],
+    clearMocks: true,
+    restoreMocks: true,
+    testTimeout: 15000,
   },
   resolve: {
     alias: {
