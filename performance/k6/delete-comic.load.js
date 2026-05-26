@@ -22,7 +22,7 @@ export const options = {
 
 export function setup() {
   const data = bootstrapBenchmarkUser(100);
-  const comicCount = Math.max(Number.parseInt(__ENV.K6_SEED_COUNT || "5", 10), 1);
+  const comicCount = Math.max(Number.parseInt(__ENV.K6_SEED_COUNT || "5", 10), options.scenarios.delete_comic.vus, 1);
   const comicIds = [];
 
   // Seed one comic per VU so each virtual user can delete a real record exactly once.

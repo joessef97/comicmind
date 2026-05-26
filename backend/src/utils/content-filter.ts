@@ -35,7 +35,7 @@ function normaliseLeet(text: string): string {
 // ── Banned words list ──────────────────────────────────────────────────
 // Kept as a flat array — O(n) regex compilation is done once below.
 
-const BANNED_PATTERNS = [
+export const BANNED_PATTERNS = [
   // Violence / weapons
   "\\bviolence\\b",
   "\\bkill\\w*\\b",
@@ -84,6 +84,26 @@ const BANNED_PATTERNS = [
 /** Pre-compiled regex that matches banned tokens/phrases with boundaries. */
 const BANNED_REGEX = new RegExp(BANNED_PATTERNS.join("|"), "i");
 const BANNED_REGEX_LIST = BANNED_PATTERNS.map((pattern) => new RegExp(pattern, "i"));
+
+function patternToPromptToken(pattern: string): string {
+  return pattern
+    .replace(/\\b/g, "")
+    .replace(/\\w\*/g, "*")
+    .replace(/\\s\+/g, " ")
+    .replace(/\\s/g, " ")
+    .replace(/\\\[/g, "[")
+    .replace(/\\\]/g, "]")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\?/g, "")
+    .replace(/\\-/g, "-")
+    .replace(/\\/g, "")
+    .replace(/^\^|\$$/g, "");
+}
+
+export function getBannedTokensForPrompt(): string {
+  return BANNED_PATTERNS.map(patternToPromptToken).join(", ");
+}
 
 function normalizeForSafety(text: string): string {
   if (!text) return "";

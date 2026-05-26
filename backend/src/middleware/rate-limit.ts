@@ -6,7 +6,10 @@ function benchmarkBypass(_req: Request, _res: Response, next: NextFunction) {
 }
 
 function createLimiter(options: Parameters<typeof rateLimit>[0]) {
-  if (process.env.BENCHMARK_MODE === "true" || process.env.DISABLE_RATE_LIMIT === "true") {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    (process.env.BENCHMARK_MODE === "true" || process.env.DISABLE_RATE_LIMIT === "true")
+  ) {
     return benchmarkBypass;
   }
 
