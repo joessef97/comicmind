@@ -3,7 +3,9 @@ import express from "express";
 import path from "path";
 
 export function serveStatic(app: Express) {
-  const publicDir = path.resolve(import.meta.dirname, "..", "..", "dist", "public");
+  // Use process.cwd() because esbuild bundles to CJS where import.meta is empty.
+  // In production the cwd is the project root, so dist/public resolves correctly.
+  const publicDir = path.resolve(process.cwd(), "dist", "public");
 
   app.use(express.static(publicDir));
 
