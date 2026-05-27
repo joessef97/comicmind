@@ -4,7 +4,6 @@ import { rm, readFile } from "fs/promises";
 
 // server deps to bundle to reduce cold start times
 const allowlist = [
-  "bcrypt",
   "express",
   "express-rate-limit",
   "jsonwebtoken",
