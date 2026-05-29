@@ -57,6 +57,48 @@ app.use((req, res, next) => {
 app.use("/uploads", express.static(getUploadsRoot()));
 console.log(`[routes] Image storage provider: ${getStorageProviderName()}`);
 
+// ── Health / keep-alive endpoint ────────────────────────────────────────
+// Render free-tier spins down after 15 min of inactivity.  A lightweight
+// health endpoint lets a self-ping keep the process alive.
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
+// ── Self-ping to prevent Render cold starts ─────────────────────────────
+// Only runs in production so local dev isn't affected.
+if (
+  process.env.NODE_ENV === "production" &&
+  (process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL)
+) {
+  const keepAliveUrl = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL!;
+  const keepAliveIntervalMinutes =
+    Number.parseInt(process.env.KEEP_ALIVE_INTERVAL_MINUTES || "", 10) || 14;
+  const KEEP_ALIVE_INTERVAL_MS = keepAliveIntervalMinutes * 60 * 1000;
+  const healthUrl = `${keepAliveUrl.replace(/\/$/, "")}/api/health`;
+
+  const ping = async () => {
+    try {
+      const response = await fetch(healthUrl);
+      if (!response.ok) {
+        console.warn(`[keep-alive] Ping returned HTTP ${response.status}: ${healthUrl}`);
+        return;
+      }
+      console.log("[keep-alive] Pinged", healthUrl);
+    } catch (err) {
+      console.warn("[keep-alive] Ping failed:", err);
+    }
+  };
+
+  const interval = setInterval(ping, KEEP_ALIVE_INTERVAL_MS);
+  interval.unref?.();
+  const initialPing = setTimeout(ping, 10_000);
+  initialPing.unref?.();
+
+  console.log(
+    `[keep-alive] Self-ping enabled every ${keepAliveIntervalMinutes} min -> ${healthUrl}`,
+  );
+}
+
 // ── API Routes ──────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

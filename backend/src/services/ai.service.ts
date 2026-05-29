@@ -8,6 +8,38 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const DEFAULT_PANEL_GENERATION_CONCURRENCY = 3;
+
+function getPositiveIntegerEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+
+  const parsed = Number.parseInt(rawValue, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await worker(items[currentIndex], currentIndex);
+      }
+    }),
+  );
+
+  return results;
+}
+
 export interface Panel {
   number: number;
   description: string;
@@ -506,9 +538,12 @@ export async function generateAllPanelImages(
   style: string,
   referenceImage?: Buffer,
 ): Promise<(Panel & { imageBuffer?: Buffer })[]> {
-  const results: (Panel & { imageBuffer?: Buffer })[] = [];
+  const concurrency = getPositiveIntegerEnv(
+    "PANEL_GENERATION_CONCURRENCY",
+    DEFAULT_PANEL_GENERATION_CONCURRENCY,
+  );
 
-  for (const panel of panels) {
+  return mapWithConcurrency(panels, concurrency, async (panel) => {
     try {
       const { imageUrl, imageBuffer, generationMeta } = await generatePanelImage(
         panel.description,
@@ -516,17 +551,15 @@ export async function generateAllPanelImages(
         panel.number,
         referenceImage,
       );
-      results.push({ ...panel, imageUrl, imageBuffer, generationMeta });
+      return { ...panel, imageUrl, imageBuffer, generationMeta };
     } catch (error) {
       console.error(`Failed to generate panel ${panel.number}:`, error);
-      results.push({
+      return {
         ...panel,
         error: `Failed to generate image for panel ${panel.number}`
-      });
+      };
     }
-  }
-
-  return results;
+  });
 }
 
 export async function retryPanelGeneration(

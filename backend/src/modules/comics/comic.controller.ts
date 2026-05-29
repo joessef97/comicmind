@@ -25,9 +25,40 @@ import { UserModel } from "../auth/auth.model";
 
 const PUBLIC_LIST_CACHE_TTL_MS = 30_000;
 const TOP_RATED_CACHE_TTL_MS = 30_000;
+const DEFAULT_IMAGE_UPLOAD_CONCURRENCY = 6;
 
 const publicListCache = new Map<string, { expiresAt: number; payload: any }>();
 let topRatedCache: { expiresAt: number; payload: any } | null = null;
+
+function getPositiveIntegerEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  if (!rawValue) return fallback;
+
+  const parsed = Number.parseInt(rawValue, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await worker(items[currentIndex], currentIndex);
+      }
+    }),
+  );
+
+  return results;
+}
 
 function clearPublicCache() {
   publicListCache.clear();
@@ -210,8 +241,14 @@ export async function generateImagesHandler(req: AuthRequest, res: Response) {
     const storageNamespace = ownedComicId || crypto.randomUUID();
 
     // Persist images to cloud/disk storage so they survive provider URL expiry.
-    const persistedPanels = await Promise.all(
-      panelsWithImages.map(async (p: any, idx: number) => {
+    const uploadConcurrency = getPositiveIntegerEnv(
+      "IMAGE_UPLOAD_CONCURRENCY",
+      DEFAULT_IMAGE_UPLOAD_CONCURRENCY,
+    );
+    const persistedPanels = await mapWithConcurrency(
+      panelsWithImages,
+      uploadConcurrency,
+      async (p: any, idx: number) => {
         try {
           if (p.imageBuffer) {
             const result = await persistImageBuffer(p.imageBuffer, storageNamespace, `panel-${idx}`);
@@ -239,7 +276,7 @@ export async function generateImagesHandler(req: AuthRequest, res: Response) {
         }
         const { imageBuffer: _buf, ...rest } = p;
         return rest;
-      }),
+      },
     );
 
     return res.status(200).json({
