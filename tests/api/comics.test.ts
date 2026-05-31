@@ -74,12 +74,20 @@ describe("comic endpoints", () => {
         style: "noir",
         idea: "Two friends chase a missing satellite.",
         panels: [{ number: 1, description: "Scene 1", dialogue: "", narration: "" }],
+        characterSheet: "A: Detective coat, silver glasses | Setting: Rainy city",
         characterRefUrl: "https://example.com/ref.png",
       });
 
     expect(response.status).toBe(201);
     expect(response.body.message).toBe("Comic saved successfully");
     expect(response.body.comic).toMatchObject({ id: "comic-1", userId: "user-1" });
+    expect(testMocks.storage.createComic).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        characterSheet: "A: Detective coat, silver glasses | Setting: Rainy city",
+        characterRefUrl: "https://example.com/ref.png",
+      }),
+    );
   });
 
   it("fetches the signed-in user's comics", async () => {

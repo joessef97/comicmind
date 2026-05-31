@@ -32,6 +32,8 @@ class InMemoryStorage implements Pick<
       style: draft.style,
       idea: draft.idea,
       panels: draft.panels ?? [],
+      characterSheet: draft.characterSheet,
+      characterRefUrl: draft.characterRefUrl,
       status: draft.status ?? "DRAFT",
       createdAt: now,
       updatedAt: now,
@@ -63,6 +65,8 @@ class InMemoryStorage implements Pick<
       style: comic.style,
       idea: comic.idea,
       panels: comic.panels ?? [],
+      characterSheet: comic.characterSheet,
+      characterRefUrl: comic.characterRefUrl,
       published: false,
       shares: 0,
       downloads: 0,
@@ -98,6 +102,8 @@ describe("Draft disappears after publish", () => {
     style: "manga",
     idea: "A robot who learns to paint",
     panels: [{ number: 1, description: "Panel 1", dialogue: "Hello", narration: "" }],
+    characterSheet: "Robot: brass body, paint-splattered apron | Setting: rooftop studio",
+    characterRefUrl: "/uploads/panels/1/character-ref.png",
     status: "COMPLETED",
   };
 
@@ -122,6 +128,8 @@ describe("Draft disappears after publish", () => {
       style: draft.style,
       idea: draft.idea,
       panels: draft.panels,
+      characterSheet: draft.characterSheet,
+      characterRefUrl: draft.characterRefUrl,
     });
 
     // … then delete the draft (mirrors frontend handlePublish)
@@ -142,6 +150,8 @@ describe("Draft disappears after publish", () => {
     expect(saved).toBeDefined();
     expect(saved!.published).toBe(true);
     expect(saved!.title).toBe(draftInput.title);
+    expect(saved!.characterSheet).toBe(draftInput.characterSheet);
+    expect(saved!.characterRefUrl).toBe(draftInput.characterRefUrl);
   });
 
   it("deleting a draft that doesn't belong to the user returns false", async () => {

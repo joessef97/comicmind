@@ -10,6 +10,7 @@ export interface IDraft extends Document {
   style: string;
   idea: string;
   panels: IPanel[];
+  characterSheet?: string;
   characterRefUrl?: string;
   status: "DRAFT" | "GENERATING" | "COMPLETED" | "FAILED";
   createdAt: Date;
@@ -41,6 +42,10 @@ const draftSchema = new Schema<IDraft>(
     panels: {
       type: Schema.Types.Mixed,
       default: [],
+    },
+    characterSheet: {
+      type: String,
+      required: false,
     },
     characterRefUrl: {
       type: String,

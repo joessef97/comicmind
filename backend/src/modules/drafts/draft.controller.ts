@@ -61,13 +61,14 @@ export async function getDraft(req: AuthRequest, res: Response) {
 
 export async function updateDraft(req: AuthRequest, res: Response) {
   try {
-    const { title, style, idea, panels, characterRefUrl, status } = req.body;
+    const { title, style, idea, panels, characterSheet, characterRefUrl, status } = req.body;
 
     const updates: any = {};
     if (title !== undefined) updates.title = title;
     if (style !== undefined) updates.style = style;
     if (idea !== undefined) updates.idea = idea;
     if (panels !== undefined) updates.panels = panels;
+    if (characterSheet !== undefined) updates.characterSheet = characterSheet;
     if (characterRefUrl !== undefined) updates.characterRefUrl = characterRefUrl;
     if (status !== undefined) updates.status = status;
 
