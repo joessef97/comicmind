@@ -468,7 +468,7 @@ export async function generateSingleImage(req: AuthRequest, res: Response) {
 
 export async function createComic(req: AuthRequest, res: Response) {
   try {
-    const { title, style, idea, panels, characterRefUrl } = req.body;
+    const { title, style, idea, panels, characterSheet, characterRefUrl } = req.body;
 
     if (!title || !style || !idea || !panels) {
       return res.status(400).json({ message: "All fields are required" });
@@ -494,6 +494,7 @@ export async function createComic(req: AuthRequest, res: Response) {
       style,
       idea,
       panels,
+      characterSheet,
       characterRefUrl,
     });
 
@@ -748,13 +749,14 @@ export async function deleteComic(req: AuthRequest, res: Response) {
 
 export async function updateComic(req: AuthRequest, res: Response) {
   try {
-    const { title, style, idea, panels, characterRefUrl } = req.body;
+    const { title, style, idea, panels, characterSheet, characterRefUrl } = req.body;
 
     const updates: any = {};
     if (title) updates.title = title;
     if (style) updates.style = style;
     if (idea) updates.idea = idea;
     if (panels) updates.panels = panels;
+    if (characterSheet !== undefined) updates.characterSheet = characterSheet;
     if (characterRefUrl !== undefined) updates.characterRefUrl = characterRefUrl;
 
     const comic = await storage.updateComic(String(req.params.id), req.userId!, updates);

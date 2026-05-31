@@ -31,6 +31,7 @@ export interface IComic extends Document {
   style: string;
   idea: string;
   panels: IPanel[];
+  characterSheet?: string;
   characterRefUrl?: string;
   published: boolean;
   shares: number;
@@ -63,6 +64,10 @@ const comicSchema = new Schema<IComic>(
     panels: {
       type: Schema.Types.Mixed,
       required: true,
+    },
+    characterSheet: {
+      type: String,
+      required: false,
     },
     characterRefUrl: {
       type: String,

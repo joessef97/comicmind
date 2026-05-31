@@ -9,6 +9,7 @@ export interface InsertComic {
   style: string;
   idea: string;
   panels: any[];
+  characterSheet?: string;
   characterRefUrl?: string;
 }
 
@@ -66,7 +67,7 @@ export function validateUserInput(data: any): { valid: boolean; message?: string
 }
 
 export function validateComicInput(data: any): { valid: boolean; message?: string; value?: InsertComic } {
-  const { title, style, idea, panels } = data || {};
+  const { title, style, idea, panels, characterSheet, characterRefUrl } = data || {};
 
   if (!title || typeof title !== "string") {
     return { valid: false, message: "Title is required" };
@@ -90,7 +91,15 @@ export function validateComicInput(data: any): { valid: boolean; message?: strin
     return { valid: false, message: "Panels must be an array" };
   }
 
-  return { valid: true, value: { title, style, idea, panels } };
+  if (characterSheet !== undefined && typeof characterSheet !== "string") {
+    return { valid: false, message: "characterSheet must be a string" };
+  }
+
+  if (characterRefUrl !== undefined && typeof characterRefUrl !== "string") {
+    return { valid: false, message: "characterRefUrl must be a string" };
+  }
+
+  return { valid: true, value: { title, style, idea, panels, characterSheet, characterRefUrl } };
 }
 
 export interface User {
@@ -111,6 +120,7 @@ export interface Comic {
   style: string;
   idea: string;
   panels: any[];
+  characterSheet?: string;
   characterRefUrl?: string;
   published: boolean;
   shares: number;
@@ -127,6 +137,7 @@ export interface Draft {
   style: string;
   idea: string;
   panels: any[];
+  characterSheet?: string;
   characterRefUrl?: string;
   status: DraftStatus;
   createdAt: Date;
@@ -138,6 +149,7 @@ export interface InsertDraft {
   style: string;
   idea: string;
   panels?: any[];
+  characterSheet?: string;
   characterRefUrl?: string;
   status?: DraftStatus;
 }
@@ -220,7 +232,7 @@ export interface UserProfile {
 }
 
 export function validateDraftInput(data: any): { valid: boolean; message?: string; value?: InsertDraft } {
-  const { title, style, idea, panels, characterRefUrl, status } = data || {};
+  const { title, style, idea, panels, characterSheet, characterRefUrl, status } = data || {};
 
   if (!title || typeof title !== "string") {
     return { valid: false, message: "Title is required" };
@@ -245,6 +257,10 @@ export function validateDraftInput(data: any): { valid: boolean; message?: strin
     return { valid: false, message: "Panels must be an array" };
   }
 
+  if (characterSheet !== undefined && typeof characterSheet !== "string") {
+    return { valid: false, message: "characterSheet must be a string" };
+  }
+
   if (characterRefUrl !== undefined && typeof characterRefUrl !== "string") {
     return { valid: false, message: "characterRefUrl must be a string" };
   }
@@ -261,9 +277,9 @@ export function validateDraftInput(data: any): { valid: boolean; message?: strin
       style,
       idea: idea || "",
       panels: panels || [],
+      characterSheet,
       characterRefUrl,
       status: status || "DRAFT",
     },
   };
 }
-
