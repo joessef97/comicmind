@@ -56,6 +56,7 @@ interface DraftData {
   style: string;
   idea: string;
   panels: Panel[];
+  characterSheet?: string;
   characterRefUrl?: string;
   status: string;
 }
@@ -155,6 +156,7 @@ export default function Editor() {
           setPremise(d.idea);
           setSelectedStyle(d.style);
           setPanels(d.panels || []);
+          setCharacterSheet(d.characterSheet || "");
           setCharRefUrl(d.characterRefUrl || "");
           setDraftId(d.id);
           draftIdRef.current = d.id;
@@ -182,6 +184,7 @@ export default function Editor() {
         setPremise(c.idea);
         setSelectedStyle(c.style);
         setPanels(c.panels || []);
+        setCharacterSheet(c.characterSheet || "");
         setCharRefUrl(c.characterRefUrl || "");
         setLoadedComicId(c.id);
         setIsPublished(c.published ?? false);
@@ -208,6 +211,7 @@ export default function Editor() {
       style: overrides?.style ?? selectedStyle,
       idea: overrides?.idea ?? premise,
       panels: overrides?.panels ?? panels,
+      characterSheet: overrides?.characterSheet ?? characterSheet,
       characterRefUrl: overrides?.characterRefUrl ?? charRefUrl,
       status: overrides?.status ?? "DRAFT",
     };
@@ -241,7 +245,7 @@ export default function Editor() {
     } finally {
       setIsSavingDraft(false);
     }
-  }, [title, premise, selectedStyle, panels, charRefUrl, toast]);
+  }, [title, premise, selectedStyle, panels, characterSheet, charRefUrl, toast]);
 
   // ── Manual "Save as Draft" button ───────────────────────────────────
   const handleSaveDraft = async () => {
@@ -307,7 +311,7 @@ export default function Editor() {
         setIsGeneratingStory(false);
         storyPanels = reusablePanels;
         setPanels(storyPanels);
-        await saveDraft({ panels: storyPanels, status: "GENERATING" } as any);
+        await saveDraft({ panels: storyPanels, characterSheet: csText, status: "GENERATING" } as any);
       } else {
         // Step 1: Generate story – attach safety metadata
         const storyRes = await apiRequest("POST", "/api/comics/generate-story", {
@@ -325,7 +329,7 @@ export default function Editor() {
         setCharacterSheet(csText);
 
         // Save panels to draft
-        await saveDraft({ panels: storyPanels, status: "GENERATING" } as any);
+        await saveDraft({ panels: storyPanels, characterSheet: csText, status: "GENERATING" } as any);
       }
 
       // Step 1.5: Generate character reference sheet for visual consistency
@@ -347,7 +351,7 @@ export default function Editor() {
             if (charRefData.imageUrl) {
               charRefUrlCaptured = charRefData.imageUrl;
               setCharRefUrl(charRefData.imageUrl);
-              await saveDraft({ characterRefUrl: charRefData.imageUrl, status: "GENERATING" } as any);
+              await saveDraft({ characterSheet: csText, characterRefUrl: charRefData.imageUrl, status: "GENERATING" } as any);
               console.log(
                 charRefData.reused
                   ? "[editor] Character reference reused:"
@@ -403,44 +407,71 @@ export default function Editor() {
 
       const panelsWithImages = [...storyPanels] as Panel[];
 
-      for (let i = 0; i < panelsWithImages.length; i++) {
-        const panel = panelsWithImages[i];
-        setPanelLoading((prev) => ({ ...prev, [panel.number]: true }));
-        setGenerationProgress(`Generating image ${i + 1} of ${panelsWithImages.length}…`);
+      // Generate panels in parallel batches of 2 to cut wait time ~in half.
+      // Using 2 (not 3+) to stay within OpenAI rate limits on free-tier.
+      const CONCURRENCY = 2;
+      for (let batchStart = 0; batchStart < panelsWithImages.length; batchStart += CONCURRENCY) {
+        const batchEnd = Math.min(batchStart + CONCURRENCY, panelsWithImages.length);
+        const batchIndices = Array.from({ length: batchEnd - batchStart }, (_, k) => batchStart + k);
 
-        try {
-          const imgRes = await apiRequest("POST", "/api/images/generate", {
-            comicId: activeComicId,
-            panelIndex: i,
-            prompt: panel.description,
-            style: selectedStyle,
-            characterSheet: csText || undefined,
-            characterRefUrl: charRefUrlCaptured || undefined,
-          });
-          const imgData = await imgRes.json();
-          panelsWithImages[i] = {
-            ...panel,
-            imageUrl: imgData.imageUrl,
-            generationMeta: imgData.meta,
-            error: undefined,
-          };
-        } catch (err: any) {
-          console.error(`Panel ${i + 1} generation failed:`, err);
-          panelsWithImages[i] = {
-            ...panel,
-            error: err.message || `Failed to generate image for panel ${i + 1}`,
-          };
-        } finally {
-          setPanelLoading((prev) => ({ ...prev, [panel.number]: false }));
-          setPanelProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+        // Mark all panels in this batch as loading
+        for (const i of batchIndices) {
+          setPanelLoading((prev) => ({ ...prev, [panelsWithImages[i].number]: true }));
+        }
+        setGenerationProgress(
+          `Generating images ${batchStart + 1}–${batchEnd} of ${panelsWithImages.length}…`,
+        );
+
+        // Fire all requests in this batch concurrently
+        const batchResults = await Promise.allSettled(
+          batchIndices.map(async (i) => {
+            const panel = panelsWithImages[i];
+            const imgRes = await apiRequest("POST", "/api/images/generate", {
+              comicId: activeComicId,
+              panelIndex: i,
+              prompt: panel.description,
+              style: selectedStyle,
+              characterSheet: csText || undefined,
+              characterRefUrl: charRefUrlCaptured || undefined,
+            });
+            const imgData = await imgRes.json();
+            return { i, imgData };
+          }),
+        );
+
+        // Process results and update UI
+        for (const result of batchResults) {
+          if (result.status === "fulfilled") {
+            const { i, imgData } = result.value;
+            panelsWithImages[i] = {
+              ...panelsWithImages[i],
+              imageUrl: imgData.imageUrl,
+              generationMeta: imgData.meta,
+              error: undefined,
+            };
+          } else {
+            // Find which index failed (match by order)
+            const failedIdx = batchIndices[batchResults.indexOf(result)];
+            console.error(`Panel ${failedIdx + 1} generation failed:`, result.reason);
+            panelsWithImages[failedIdx] = {
+              ...panelsWithImages[failedIdx],
+              error: result.reason?.message || `Failed to generate image for panel ${failedIdx + 1}`,
+            };
+          }
         }
 
-        // Update state after each panel so user sees incremental results
+        // Clear loading state for this batch and update progress
+        for (const i of batchIndices) {
+          setPanelLoading((prev) => ({ ...prev, [panelsWithImages[i].number]: false }));
+        }
+        setPanelProgress((prev) => ({ ...prev, done: prev.done + batchIndices.length }));
+
+        // Update state after each batch so user sees incremental results
         setPanels([...panelsWithImages]);
       }
 
       // Mark draft as completed
-      await saveDraft({ panels: panelsWithImages, characterRefUrl: charRefUrlCaptured, status: "COMPLETED" } as any);
+      await saveDraft({ panels: panelsWithImages, characterSheet: csText, characterRefUrl: charRefUrlCaptured, status: "COMPLETED" } as any);
 
       setIsGeneratingImages(false);
       setGenerationProgress("");
@@ -516,6 +547,7 @@ export default function Editor() {
           style: selectedStyle,
           idea: premise,
           panels,
+          characterSheet: characterSheet || undefined,
           characterRefUrl: charRefUrl || undefined,
         });
       } else {
@@ -525,6 +557,7 @@ export default function Editor() {
           style: selectedStyle,
           idea: premise,
           panels,
+          characterSheet: characterSheet || undefined,
           characterRefUrl: charRefUrl || undefined,
         });
       }
@@ -564,6 +597,7 @@ export default function Editor() {
           style: selectedStyle,
           idea: premise,
           panels,
+          characterSheet: characterSheet || undefined,
           characterRefUrl: charRefUrl || undefined,
         });
         const data = await res.json();
@@ -1144,6 +1178,7 @@ export default function Editor() {
                       style: selectedStyle,
                       idea: premise,
                       panels: updatedPanels,
+                      characterSheet: characterSheet || undefined,
                       characterRefUrl: charRefUrl || undefined,
                     });
                   } else {
