@@ -5,7 +5,12 @@ import { HeroCardStack } from "@/components/hero/hero-card-stack";
 import { ArrowRight, Star } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { usePanelImages } from "@/hooks/use-panel-images";
+import {
+  usePanelImages,
+  usePublicComics,
+  useComicRun,
+  type PublicComic,
+} from "@/hooks/use-panel-images";
 import { getDisplayImageUrl } from "@/lib/utils";
 
 const STEPS = [
@@ -38,17 +43,6 @@ const STYLES = [
   { id: "watercolor", name: "Watercolor", description: "Soft textures and fluid artistic strokes", shadow: "hard-shadow-blue" },
   { id: "retro", name: "Retro", description: "Classic vintage comic book aesthetic", shadow: "hard-shadow-yellow" },
 ];
-
-interface PublicComic {
-  _id: string;
-  title: string;
-  style?: string;
-  authorName?: string;
-  averageRating?: number;
-  ratingsCount?: number;
-  coverUrl?: string;
-  panels?: { imageUrl: string }[];
-}
 
 export default function Home() {
   const { user } = useAuth();
@@ -170,12 +164,10 @@ function StepsBand() {
 /* -------------------------------------------------------------------------- */
 
 function ConsistencyBand() {
-  const images = usePanelImages(8);
-  // A schematic, not a screenshot of a competitor: consecutive panels from one
-  // run read as a consistent cast, a scattered pick from different comics does
-  // not. The two rows draw from disjoint slices so the contrast is real.
-  const consistent = images.slice(0, 4);
-  const shuffled = [images[7], images[5], images[6], images[4]].filter(Boolean) as string[];
+  // Real proof for our own claim: consecutive panels from one published comic,
+  // same cast, in story order. The comparison row is left as a placeholder —
+  // see the note on ThumbnailRow.
+  const run = useComicRun(4);
 
   return (
     <section className="border-b-4 border-[#12100c] bg-[#f2ede1] px-6 py-16 lg:px-12 lg:py-20">
@@ -193,24 +185,36 @@ function ConsistencyBand() {
         </div>
 
         <div className="space-y-8">
-          {/* "Other tools" shuffles the cast so the faces don't match; ComicMind
-              holds one run in order. */}
-          <ThumbnailRow label="Other tools" variant="dashed" images={shuffled} />
-          <ThumbnailRow label="ComicMind" variant="solid" images={consistent} />
+          <ThumbnailRow label="Other tools" variant="dashed" images={[]} />
+          <ThumbnailRow
+            label="ComicMind"
+            variant="solid"
+            images={run.panels}
+            caption={run.title ? `From "${run.title}" — panels 1–4, one unbroken run` : undefined}
+          />
         </div>
       </div>
     </section>
   );
 }
 
+/**
+ * The "Other tools" row is deliberately left as empty hatching. Filling it
+ * would mean either fabricating a competitor's output or passing ComicMind's
+ * own panels off as someone else's — both would make the comparison a claim we
+ * cannot stand behind. Drop real screenshots in via `images` to make it a
+ * genuine side-by-side.
+ */
 function ThumbnailRow({
   label,
   variant,
   images,
+  caption,
 }: {
   label: string;
   variant: "dashed" | "solid";
   images: string[];
+  caption?: string;
 }) {
   const frame =
     variant === "dashed"
@@ -224,8 +228,11 @@ function ThumbnailRow({
       </span>
       <div className="grid grid-cols-4 gap-3">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className={`art-placeholder aspect-square overflow-hidden ${frame}`}>
-            {images[i] && (
+          <div
+            key={i}
+            className={`art-placeholder relative flex aspect-square items-center justify-center overflow-hidden ${frame}`}
+          >
+            {images[i] ? (
               <img
                 src={images[i]}
                 alt=""
@@ -234,10 +241,15 @@ function ThumbnailRow({
                 loading="lazy"
                 decoding="async"
               />
+            ) : (
+              <span className="font-display text-[22px] text-[#6d675a]">?</span>
             )}
           </div>
         ))}
       </div>
+      {caption && (
+        <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">{caption}</p>
+      )}
     </div>
   );
 }
@@ -381,25 +393,16 @@ function StylesBand() {
 /* -------------------------------------------------------------------------- */
 
 function TopRatedBand() {
-  const [comics, setComics] = useState<PublicComic[]>([]);
+  const comics = usePublicComics(12);
 
-  useEffect(() => {
-    async function fetchComics() {
-      try {
-        const res = await fetch("/api/comics/public?limit=4");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.comics && Array.isArray(data.comics)) {
-          setComics(data.comics.slice(0, 4));
-        }
-      } catch {
-        // Hatched placeholders stand in on error.
-      }
-    }
-    fetchComics();
-  }, []);
+  // The endpoint sorts by createdAt, so rank here to earn the heading.
+  const ranked = [...comics]
+    .sort((a, b) =>
+      b.averageRating - a.averageRating || b.ratingsCount - a.ratingsCount,
+    )
+    .slice(0, 4);
 
-  const slots = comics.length ? comics : [undefined, undefined, undefined, undefined];
+  const slots = ranked.length ? ranked : [undefined, undefined, undefined, undefined];
 
   return (
     <section className="border-b-4 border-[#12100c] bg-[#f2ede1] px-6 py-16 lg:px-12 lg:py-20">
@@ -418,7 +421,7 @@ function TopRatedBand() {
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {slots.map((comic, index) => (
-            <TopRatedCard key={comic?._id ?? index} comic={comic} />
+            <TopRatedCard key={comic?.id ?? index} comic={comic} />
           ))}
         </div>
       </div>
@@ -427,7 +430,8 @@ function TopRatedBand() {
 }
 
 function TopRatedCard({ comic }: { comic?: PublicComic }) {
-  const imageUrl = comic?.coverUrl || comic?.panels?.[0]?.imageUrl;
+  // There is no cover field on the API — panel one is the cover.
+  const imageUrl = comic?.panels?.[0]?.imageUrl;
 
   const body = (
     <div className="h-full border-[3px] border-[#12100c] bg-[#f8f5ec]">
@@ -454,9 +458,9 @@ function TopRatedCard({ comic }: { comic?: PublicComic }) {
           {comic?.title ?? "Untitled"}
         </h3>
         <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
-          {comic?.authorName ? `By ${comic.authorName}` : "Awaiting a first issue"}
+          {comic?.authorUsername ? `By ${comic.authorUsername}` : "Awaiting a first issue"}
         </p>
-        {typeof comic?.averageRating === "number" && (
+        {typeof comic?.averageRating === "number" && comic.ratingsCount > 0 && (
           <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-[#12100c]">
             <Star className="h-3 w-3 fill-[#f2b32e] text-[#12100c]" />
             {comic.averageRating.toFixed(1)}
@@ -472,7 +476,7 @@ function TopRatedCard({ comic }: { comic?: PublicComic }) {
   if (!comic) return body;
 
   return (
-    <Link href={`/comic/${comic._id}`}>
+    <Link href={`/comic/${comic.id}`}>
       <a className="block h-full">{body}</a>
     </Link>
   );
