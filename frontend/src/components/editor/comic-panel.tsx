@@ -45,11 +45,11 @@ export function ComicPanel({
     <div
       onClick={onSelect}
       className={cn(
-        "relative bg-white border-[3px] overflow-hidden cursor-pointer flex flex-col",
+        "relative flex cursor-pointer flex-col overflow-hidden border-[3px] bg-[#f8f5ec]",
         "transition-shadow duration-150",
         isSelected
-          ? "border-primary shadow-[0_0_0_3px_rgba(139,92,246,0.3)] z-10"
-          : "border-black hover:shadow-lg"
+          ? "z-10 border-[#f2b32e] shadow-[4px_4px_0_#12100c]"
+          : "border-[#12100c] hover:shadow-[4px_4px_0_#12100c]"
       )}
     >
       {/* ── Image Area ─────────────────────────────────────── */}
@@ -61,10 +61,10 @@ export function ComicPanel({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+          <div className="art-placeholder flex h-full w-full items-center justify-center">
             <div className="text-center p-4">
-              <span className="text-gray-400 text-4xl font-bold">{index + 1}</span>
-              <p className="text-[10px] text-gray-400 mt-1">
+              <span className="numeral-outline text-4xl text-[#f2ede1]">{index + 1}</span>
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[#4a4535]">
                 {isLoading ? "Generating…" : "Waiting for image…"}
               </p>
             </div>
@@ -73,17 +73,17 @@ export function ComicPanel({
 
         {/* Loading overlay */}
         {isLoading && (
-          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 z-30">
-            <Loader2 className="w-8 h-8 text-white animate-spin" />
-            <span className="text-xs text-white font-medium">Generating…</span>
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 bg-[#12100c]/80">
+            <Loader2 className="h-8 w-8 animate-spin text-[#f2b32e]" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#f2ede1]">Generating…</span>
           </div>
         )}
 
         {/* ── Narration Caption Box (yellow, top-left) ──────────── */}
         {narration && narration.trim() && (
           <div className="absolute top-2 left-2 z-20 pointer-events-none" style={{ maxWidth: '85%' }}>
-            <div className="bg-[#FFEB3B] border-[2.5px] border-black px-3 py-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-              <p className="text-black text-xs sm:text-sm leading-snug font-bold font-serif">
+            <div className="border-[3px] border-[#12100c] bg-[#f2b32e] px-3 py-2 shadow-[3px_3px_0_#12100c]">
+              <p className="text-xs font-bold leading-snug text-[#12100c] sm:text-sm">
                 {narration}
               </p>
             </div>
@@ -93,11 +93,11 @@ export function ComicPanel({
         {/* ── Speech Bubble (white, bottom) ─────────────────── */}
         {dialogueText && (
           <div className="absolute bottom-3 left-2 z-20 pointer-events-none" style={{ maxWidth: '88%' }}>
-            <div className="relative bg-white text-black px-4 py-2.5 rounded-[24px] border-[2.5px] border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+            <div className="relative border-[3px] border-[#12100c] bg-[#f8f5ec] px-4 py-2.5 text-[#12100c] shadow-[3px_3px_0_#12100c]">
               {/* Speaker name */}
               {parsedDialogue ? (
                 <>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-0.5">
+                  <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#6d675a]">
                     {parsedDialogue.speaker}
                   </p>
                   <p className="text-sm sm:text-base leading-snug font-extrabold">
@@ -110,8 +110,8 @@ export function ComicPanel({
                 </p>
               )}
               {/* Bubble tail */}
-              <div className="absolute -bottom-[12px] left-6 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[12px] border-t-black" />
-              <div className="absolute -bottom-[8px] left-[27px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[9px] border-t-white" />
+              <div className="absolute -bottom-[12px] left-6 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[12px] border-t-[#12100c]" />
+              <div className="absolute -bottom-[8px] left-[27px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[9px] border-t-[#f8f5ec]" />
             </div>
           </div>
         )}

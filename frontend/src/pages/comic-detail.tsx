@@ -65,13 +65,18 @@ interface ComicDetail {
   downloads: number;
 }
 
+/**
+ * Panel placeholder ground passed to the reader. The reader wraps this in
+ * `bg-gradient-to-br`, so matching from/to stops render as a flat ink fill —
+ * Newsprint has no gradients.
+ */
 const STYLE_GRADIENTS: Record<string, string> = {
-  anime: "from-purple-900 to-indigo-900",
-  realistic: "from-slate-800 to-gray-900",
-  cartoon: "from-blue-900 to-cyan-900",
-  noir: "from-gray-900 to-black",
-  watercolor: "from-sky-900 to-teal-900",
-  retro: "from-amber-900 to-orange-900",
+  anime: "from-[#262218] to-[#262218]",
+  realistic: "from-[#262218] to-[#262218]",
+  cartoon: "from-[#262218] to-[#262218]",
+  noir: "from-[#262218] to-[#262218]",
+  watercolor: "from-[#262218] to-[#262218]",
+  retro: "from-[#262218] to-[#262218]",
 };
 
 function StarRating({
@@ -100,11 +105,11 @@ function StarRating({
             onClick={() => onChange?.(n)}
             onMouseEnter={() => interactive && setHover(n)}
             onMouseLeave={() => interactive && setHover(0)}
-            className={`transition-colors ${interactive ? "cursor-pointer hover:scale-110" : "cursor-default"}`}
+            className={`transition-transform ${interactive ? "cursor-pointer hover:scale-110" : "cursor-default"}`}
           >
             <Star
               className={`${sizeClass} ${
-                filled ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40"
+                filled ? "fill-[#f2b32e] text-[#12100c]" : "text-[#6d675a]"
               }`}
             />
           </button>
@@ -322,7 +327,7 @@ export default function ComicDetailPage() {
     return (
       <PageLayout>
         <div className="flex items-center justify-center py-32">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#d8402f]" />
         </div>
       </PageLayout>
     );
@@ -332,10 +337,12 @@ export default function ComicDetailPage() {
     return (
       <PageLayout>
         <div className="container mx-auto px-4 py-20 text-center">
-          <p className="text-muted-foreground text-lg mb-4">{error || "Comic not found"}</p>
+          <p className="mb-6 font-mono text-[12px] uppercase tracking-[0.12em] text-[#6d675a]">
+            {error || "Comic not found"}
+          </p>
           <Link href="/browse">
             <Button variant="outline">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Browse
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Browse
             </Button>
           </Link>
         </div>
@@ -357,156 +364,132 @@ export default function ComicDetailPage() {
         />
       )}
 
-      {/* Hero header */}
-      <div className={`bg-gradient-to-br ${gradient} relative`}>
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
+      {/* Back bar */}
+      <div className="border-b-[3px] border-[#12100c] bg-[#f2ede1]">
+        <div className="container mx-auto px-4 py-3">
           <Link href="/browse">
-            <span className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors mb-6 cursor-pointer">
-              <ArrowLeft className="w-4 h-4" /> Browse Comics
+            <span className="inline-flex cursor-pointer items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-[#4a4535] transition-colors hover:text-[#12100c]">
+              <ArrowLeft className="h-3.5 w-3.5" /> Browse Comics
             </span>
           </Link>
+        </div>
+      </div>
 
-          <h1 className="text-3xl md:text-5xl font-display font-bold text-white mb-3">
-            {comic.title}
-          </h1>
+      {/* Header */}
+      <div className="border-b-4 border-[#12100c] bg-[#f2ede1]">
+        <div className="container mx-auto grid gap-8 px-4 py-12 md:py-16 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="border-2 border-[#12100c] bg-[#12100c] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#f2ede1]">
+                {comic.style}
+              </span>
+              <span className="border-2 border-[#12100c] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#12100c]">
+                {comic.panels.length} Panels
+              </span>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-white/70 text-sm mb-4">
-            <span className="flex items-center gap-1.5">
-              <User className="w-4 h-4" /> {comic.authorUsername}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4" /> {formatDate(comic.createdAt)}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Layout className="w-4 h-4" /> {comic.panels.length} Panels
-            </span>
-            <span className="inline-block bg-white/10 border border-white/20 rounded-md px-2 py-0.5 text-xs font-medium capitalize">
-              {comic.style}
-            </span>
+            <h1 className="font-display text-[42px] uppercase leading-[0.95] text-[#12100c] md:text-[66px]">
+              {comic.title}
+            </h1>
+
+            <p className="mt-5 max-w-2xl text-[16px] leading-relaxed text-[#4a4535]">{comic.idea}</p>
+
+            <div className="mt-6 flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.1em] text-[#6d675a]">
+              <span className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" /> {comic.authorUsername}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> {formatDate(comic.createdAt)}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Layout className="h-3.5 w-3.5" /> {comic.panels.length} Panels
+              </span>
+            </div>
           </div>
 
-          <p className="text-white/80 max-w-2xl text-base">{comic.idea}</p>
-
           {/* Rating summary */}
-          <div className="flex items-center gap-3 mt-6">
+          <div className="flex flex-col gap-3 border-[3px] border-[#12100c] bg-[#f2b32e] p-5 hard-shadow-sm">
             <StarRating value={Math.round(avgRating)} size="lg" />
-            <span className="text-white font-bold text-lg">{avgRating.toFixed(1)}</span>
-            <span className="text-white/50 text-sm">
-              ({ratingCount} rating{ratingCount !== 1 ? "s" : ""})
-            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-[36px] leading-none text-[#12100c]">
+                {avgRating.toFixed(1)}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#12100c]">
+                ({ratingCount} rating{ratingCount !== 1 ? "s" : ""})
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-10">
-        {/* Comic Book Reader */}
-        <section className="mb-16">
-          <div className="bg-card rounded-md shadow-2xl p-4 md:p-6 max-w-[1200px] mx-auto overflow-visible">
-            <ComicBookReader
-              comicId={comic.id}
-              title={comic.title}
-              panels={comic.panels}
-              gradient={gradient}
-            />
-          </div>
-        </section>
+      {/* Reader on an ink band */}
+      <section className="border-b-4 border-[#12100c] bg-[#1b1811] px-4 py-12">
+        <div className="mx-auto max-w-[1200px] overflow-visible border-[4px] border-[#f2ede1] bg-[#12100c] p-4 md:p-6">
+          <ComicBookReader
+            comicId={comic.id}
+            title={comic.title}
+            panels={comic.panels}
+            gradient={gradient}
+          />
+        </div>
+      </section>
 
-        {/* Share & Stats Section */}
-        <section className="max-w-2xl mb-12">
-          <div className="p-5 bg-card rounded-xl border border-border/70">
-            <div className="flex flex-wrap items-center gap-5 mb-5 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Heart className="w-4 h-4 text-red-400" />
-                {avgRating.toFixed(1)} ({ratingCount})
-              </span>
-              <span className="flex items-center gap-1">
-                <MessageCircle className="w-4 h-4 text-blue-400" />
-                {commentTotal}
-              </span>
-              <span className="flex items-center gap-1">
-                <Share2 className="w-4 h-4 text-green-400" />
-                {comic.shares ?? 0}
-              </span>
-              <span className="flex items-center gap-1">
-                <Download className="w-4 h-4 text-purple-400" />
-                {comic.downloads ?? 0}
-              </span>
-            </div>
-            <h3 className="text-sm font-medium mb-3">Share this comic</h3>
-            <ShareButtons
-              comicId={comic.id}
-              title={comic.title}
-              description={comic.idea}
-              exportRef={exportRef}
-              prepareExport={prepareExport}
-              onShareCountUpdate={(shares) =>
-                setComic((prev) => (prev ? { ...prev, shares } : prev))
-              }
-              onDownloadCountUpdate={(downloads) =>
-                setComic((prev) => (prev ? { ...prev, downloads } : prev))
-              }
-            />
+      <main className="container mx-auto grid gap-12 px-4 py-14 lg:grid-cols-[1fr_320px]">
+        <section>
+          {/* Engagement stats between ink rules */}
+          <div className="flex flex-wrap items-center gap-6 border-y-[3px] border-[#12100c] py-4 font-mono text-[11px] uppercase tracking-[0.1em] text-[#12100c]">
+            <span className="flex items-center gap-1.5">
+              <Heart className="h-4 w-4 text-[#d8402f]" />
+              {avgRating.toFixed(1)} ({ratingCount})
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MessageCircle className="h-4 w-4 text-[#2f4fd8]" />
+              {commentTotal}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Share2 className="h-4 w-4 text-[#4a4535]" />
+              {comic.shares ?? 0}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Download className="h-4 w-4 text-[#4a4535]" />
+              {comic.downloads ?? 0}
+            </span>
           </div>
-        </section>
-
-        {/* Rate & Comment section */}
-        <section className="max-w-2xl">
-          {/* Your rating */}
-          {user && (
-            <div className="mb-8 p-5 bg-card rounded-xl border border-border/70">
-              <h3 className="text-sm font-medium mb-3">Rate this comic</h3>
-              <div className="flex items-center gap-3">
-                <StarRating
-                  value={myRating}
-                  interactive={!isRating}
-                  onChange={handleRate}
-                  size="lg"
-                />
-                {isRating && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                {myRating > 0 && (
-                  <span className="text-sm text-muted-foreground">
-                    You rated {myRating} star{myRating !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Public Ratings List */}
-          <div className="mb-10">
-            <div className="mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5 text-muted-foreground" />
-              <h2 className="text-xl font-display font-bold">
+          <div className="mb-12 mt-10">
+            <div className="mb-5 flex items-center gap-2">
+              <Star className="h-5 w-5 text-[#12100c]" />
+              <h2 className="font-display text-[26px] uppercase leading-none text-[#12100c]">
                 Ratings ({ratingsTotal})
               </h2>
             </div>
 
             {ratingsList.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4 text-center">
+              <p className="border-y-[2px] border-[#ddd6c4] py-6 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
                 No ratings yet. Be the first!
               </p>
             ) : (
-              <div className="space-y-3">
+              <div className="border-t-[3px] border-[#12100c]">
                 {ratingsList.map((r) => (
                   <div
                     key={r.id}
-                    className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border/70"
+                    className="flex items-center gap-3 border-b-[2px] border-[#ddd6c4] py-3"
                   >
                     {r.avatar ? (
                       <img
                         src={r.avatar}
                         alt={r.username}
-                        className="w-8 h-8 rounded-full"
+                        className="h-8 w-8 border-2 border-[#12100c] object-cover"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                      <div className="flex h-8 w-8 items-center justify-center border-2 border-[#12100c] bg-[#f2b32e] font-display text-[13px] text-[#12100c]">
                         {r.username.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">{r.username}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[14px] font-semibold text-[#12100c]">{r.username}</span>
+                      <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
                         {formatDate(r.createdAt)}
                       </span>
                     </div>
@@ -517,7 +500,7 @@ export default function ComicDetailPage() {
             )}
 
             {ratingsTotal > RATINGS_PER_PAGE && (
-              <div className="flex items-center justify-center gap-3 mt-4">
+              <div className="mt-6 flex items-center justify-center gap-4">
                 <Button
                   variant="outline"
                   size="sm"
@@ -526,7 +509,7 @@ export default function ComicDetailPage() {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#6d675a]">
                   Page {ratingsPage} of {Math.ceil(ratingsTotal / RATINGS_PER_PAGE)}
                 </span>
                 <Button
@@ -542,9 +525,9 @@ export default function ComicDetailPage() {
           </div>
 
           {/* Comments */}
-          <div className="mb-4 flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-muted-foreground" />
-            <h2 className="text-xl font-display font-bold">
+          <div className="mb-5 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-[#12100c]" />
+            <h2 className="font-display text-[26px] uppercase leading-none text-[#12100c]">
               Comments ({commentTotal})
             </h2>
           </div>
@@ -560,53 +543,50 @@ export default function ComicDetailPage() {
                     placeholder="Share your thoughts on this comic…"
                     maxLength={500}
                     rows={3}
-                    className="w-full rounded-lg bg-card border border-border/80 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/50"
+                    className="w-full resize-none border-[3px] border-[#12100c] bg-[#f8f5ec] px-4 py-3 text-[14px] placeholder:text-[#6d675a] focus:outline-none focus:ring-2 focus:ring-[#12100c]"
                   />
-                  <div className="text-xs text-muted-foreground/50 text-right mt-1">
+                  <div className="mt-1 text-right font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
                     {commentText.length}/500
                   </div>
                 </div>
                 <Button
                   type="submit"
                   disabled={!commentText.trim() || isSubmittingComment}
-                  className="self-end h-10"
+                  className="h-11 self-start"
                 >
                   {isSubmittingComment ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                    <Send className="h-4 w-4" />
                   )}
                 </Button>
               </div>
             </form>
           ) : (
-            <div className="mb-8 p-4 rounded-lg bg-card border border-border/70 text-center text-sm text-muted-foreground">
+            <div className="mb-8 border-[3px] border-dashed border-[#6d675a] p-4 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-[#6d675a]">
               <Link href="/login">
-                <span className="text-primary hover:underline cursor-pointer">Log in</span>
+                <span className="cursor-pointer text-[#d8402f] hover:underline">Log in</span>
               </Link>{" "}
               to leave a comment.
             </div>
           )}
 
           {/* Comment list */}
-          <div className="space-y-4">
+          <div className="border-t-[3px] border-[#12100c]">
             {comments.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4 text-center">
+              <p className="border-b-[2px] border-[#ddd6c4] py-6 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
                 No comments yet. Be the first!
               </p>
             ) : (
               comments.map((c) => (
-                <div
-                  key={c.id}
-                  className="p-4 bg-card rounded-lg border border-border/70"
-                >
-                  <div className="flex items-center justify-between mb-2">
+                <div key={c.id} className="border-b-[2px] border-[#ddd6c4] py-4">
+                  <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                      <div className="flex h-7 w-7 items-center justify-center border-2 border-[#12100c] bg-[#f2b32e] font-display text-[12px] text-[#12100c]">
                         {c.username.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-sm font-medium">{c.username}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[14px] font-semibold text-[#12100c]">{c.username}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
                         {formatDate(c.createdAt)}
                       </span>
                     </div>
@@ -614,14 +594,14 @@ export default function ComicDetailPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        className="h-7 w-7 text-[#6d675a] hover:text-[#d8402f]"
                         onClick={() => handleDeleteComment(c.id)}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>
-                  <p className="text-sm text-foreground/80 leading-relaxed">{c.text}</p>
+                  <p className="text-[15px] leading-relaxed text-[#4a4535]">{c.text}</p>
                 </div>
               ))
             )}
@@ -629,7 +609,7 @@ export default function ComicDetailPage() {
 
           {/* Comment pagination */}
           {commentTotal > COMMENTS_PER_PAGE && (
-            <div className="flex items-center justify-center gap-3 mt-6">
+            <div className="mt-6 flex items-center justify-center gap-4">
               <Button
                 variant="outline"
                 size="sm"
@@ -638,7 +618,7 @@ export default function ComicDetailPage() {
               >
                 Previous
               </Button>
-              <span className="text-sm text-muted-foreground">
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#6d675a]">
                 Page {commentPage} of {Math.ceil(commentTotal / COMMENTS_PER_PAGE)}
               </span>
               <Button
@@ -652,6 +632,60 @@ export default function ComicDetailPage() {
             </div>
           )}
         </section>
+
+        {/* Sidebar */}
+        <aside className="space-y-8 lg:sticky lg:top-[98px] lg:self-start">
+          {user && (
+            <div className="border-[3px] border-[#12100c] bg-[#f8f5ec] p-5">
+              <h3 className="label-mono mb-4 text-[#12100c]">Rate this comic</h3>
+              <div className="flex flex-wrap items-center gap-3">
+                <StarRating
+                  value={myRating}
+                  interactive={!isRating}
+                  onChange={handleRate}
+                  size="lg"
+                />
+                {isRating && <Loader2 className="h-4 w-4 animate-spin text-[#6d675a]" />}
+                {myRating > 0 && (
+                  <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
+                    You rated {myRating} star{myRating !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="border-[3px] border-[#12100c] bg-[#12100c] p-5">
+            <h3 className="font-display text-[24px] uppercase leading-none text-[#f2ede1]">
+              Make your own
+            </h3>
+            <p className="mt-3 text-[14px] leading-relaxed text-[#a39b8b]">
+              Six panels, one consistent cast. Start with a sentence.
+            </p>
+            <Link href="/editor/new">
+              <Button className="mt-5 w-full border-[3px] border-[#f2ede1] bg-[#d8402f] text-[#f2ede1] shadow-[5px_5px_0_#f2ede1]">
+                Start Creating
+              </Button>
+            </Link>
+          </div>
+
+          <div className="border-[3px] border-[#12100c] bg-[#f8f5ec] p-5">
+            <h3 className="label-mono mb-4 text-[#12100c]">Share this comic</h3>
+            <ShareButtons
+              comicId={comic.id}
+              title={comic.title}
+              description={comic.idea}
+              exportRef={exportRef}
+              prepareExport={prepareExport}
+              onShareCountUpdate={(shares) =>
+                setComic((prev) => (prev ? { ...prev, shares } : prev))
+              }
+              onDownloadCountUpdate={(downloads) =>
+                setComic((prev) => (prev ? { ...prev, downloads } : prev))
+              }
+            />
+          </div>
+        </aside>
       </main>
     </PageLayout>
   );

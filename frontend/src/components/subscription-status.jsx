@@ -60,40 +60,40 @@ export default function SubscriptionStatus() {
 
   if (loading) {
     return (
-      <section className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-        <div className="mb-4 h-5 w-44 animate-pulse rounded bg-muted" />
-        <div className="mb-3 h-4 w-56 animate-pulse rounded bg-muted" />
-        <div className="mb-6 h-4 w-64 animate-pulse rounded bg-muted" />
-        <div className="h-2 w-full animate-pulse rounded-full bg-muted" />
+      <section className="mt-4 border-[3px] border-[#12100c] bg-[#f8f5ec] p-5">
+        <div className="mb-4 h-5 w-44 animate-pulse bg-[#ddd6c4]" />
+        <div className="mb-3 h-4 w-56 animate-pulse bg-[#ddd6c4]" />
+        <div className="mb-6 h-4 w-64 animate-pulse bg-[#ddd6c4]" />
+        <div className="h-2 w-full animate-pulse bg-[#ddd6c4]" />
       </section>
     );
   }
 
   if (error) {
     return (
-      <section className="mt-4 rounded-xl border border-red-300/60 bg-red-50 p-5 shadow-sm dark:border-red-500/30 dark:bg-red-950/20">
-        <h3 className="text-base font-semibold text-red-700 dark:text-red-300">Subscription Unavailable</h3>
-        <p className="mt-1 text-sm text-red-700/90 dark:text-red-300/90">{error}</p>
+      <section className="mt-4 border-[3px] border-[#12100c] bg-[#d8402f] p-5">
+        <h3 className="font-display text-[20px] uppercase leading-none text-[#f2ede1]">Subscription Unavailable</h3>
+        <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.1em] text-[#f2ede1]">{error}</p>
       </section>
     );
   }
 
   if (data?.isActive) {
     return (
-      <section className="mt-4 rounded-xl border border-green-300/60 bg-green-50 p-5 shadow-sm transition-all hover:shadow-md dark:border-green-500/30 dark:bg-green-950/20">
-        <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">Your Subscription</h3>
-        <div className="mt-3 grid gap-2 text-sm text-green-900 dark:text-green-200 md:grid-cols-2">
+      <section className="mt-4 border-[3px] border-[#12100c] bg-[#f2b32e] p-5 hard-shadow-sm">
+        <h3 className="font-display text-[22px] uppercase leading-none text-[#12100c]">Your Subscription</h3>
+        <div className="mt-4 grid gap-2 font-mono text-[11px] uppercase tracking-[0.1em] text-[#12100c] md:grid-cols-2">
           <p><span className="font-medium">Plan:</span> {data.packageName || "-"}</p>
           <p><span className="font-medium">Remaining comics:</span> {Math.max(0, data.remainingComics ?? 0)}</p>
         </div>
         <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between text-xs text-green-800 dark:text-green-300">
+          <div className="mb-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.12em] text-[#12100c]">
             <span>Usage</span>
             <span>{data.comicsUsed} / {data.comicsLimit}</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-green-200/70 dark:bg-green-900/50">
+          <div className="h-3 w-full overflow-hidden border-2 border-[#12100c] bg-[#f8f5ec]">
             <div
-              className="h-full rounded-full bg-green-500 transition-all duration-500"
+              className="h-full bg-[#12100c] transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -103,12 +103,12 @@ export default function SubscriptionStatus() {
   }
 
   return (
-    <section className="mt-4 rounded-xl border border-border bg-muted/40 p-5 shadow-sm transition-all hover:shadow-md">
-      <h3 className="text-lg font-semibold text-foreground">No Active Subscription</h3>
-      <p className="mt-1 text-sm text-muted-foreground">You are not subscribed.</p>
+    <section className="mt-4 border-[3px] border-[#12100c] bg-[#f8f5ec] p-5">
+      <h3 className="font-display text-[22px] uppercase leading-none text-[#12100c]">No Active Subscription</h3>
+      <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.1em] text-[#6d675a]">You are not subscribed.</p>
       <Button
         type="button"
-        className="mt-4 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        className="mt-4"
         onClick={() => {
           setLocation("/user-guide#packages");
         }}

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, type SyntheticEvent } from "
 import { PageLayout } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Star, Layout, Clock, User, Heart, MessageCircle, Share2, Download } from "lucide-react";
+import { Loader2, Heart, MessageCircle, Share2, Download } from "lucide-react";
 import { Link } from "wouter";
 import { getDisplayImageUrl } from "@/lib/utils";
 
@@ -21,14 +21,8 @@ interface PublicComic {
   downloads: number;
 }
 
-const STYLE_GRADIENTS: Record<string, string> = {
-  anime: "bg-gradient-to-br from-purple-900 to-indigo-900",
-  realistic: "bg-gradient-to-br from-slate-800 to-gray-900",
-  cartoon: "bg-gradient-to-br from-blue-900 to-cyan-900",
-  noir: "bg-gradient-to-br from-gray-900 to-black",
-  watercolor: "bg-gradient-to-br from-sky-900 to-teal-900",
-  retro: "bg-gradient-to-br from-amber-900 to-orange-900",
-};
+/** Covers sit on hatched paper until the panel art loads. */
+const COVER_GROUND = "art-placeholder";
 
 export default function BrowsePage() {
   const PAGE_SIZE = 18;
@@ -106,49 +100,64 @@ export default function BrowsePage() {
 
   return (
     <PageLayout>
-      <main className="container mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-display font-bold mb-2">Browse Comics</h1>
-          <p className="text-muted-foreground">Explore comics created by the community.</p>
-          <div className="mt-4 max-w-sm">
+      <main className="container mx-auto px-4 py-14">
+        <div className="mb-10 flex flex-col gap-6 border-b-4 border-[#12100c] pb-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <h1 className="font-display text-[44px] uppercase leading-[0.95] text-[#12100c] sm:text-[62px]">
+              Browse Comics
+            </h1>
+            <p className="label-mono text-[#6d675a]">Explore comics created by the community.</p>
+          </div>
+
+          <form
+            className="flex w-full max-w-md"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setDebouncedSearch(search.trim().toLowerCase());
+            }}
+          >
             <Input
               placeholder="Search title, idea, or style"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="border-r-0"
             />
-          </div>
+            <button
+              type="submit"
+              className="border-[3px] border-[#12100c] bg-[#12100c] px-5 font-display text-sm uppercase tracking-wide text-[#f2ede1]"
+            >
+              Search
+            </button>
+          </form>
         </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#d8402f]" />
           </div>
         ) : visibleComics.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground">No comics published yet.</p>
+          <div className="border-[3px] border-dashed border-[#6d675a] py-20 text-center">
+            <p className="label-mono text-[#6d675a]">No comics published yet.</p>
           </div>
         ) : (
           <>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {visibleComics.map((comic) => (
               <Link key={comic.id} href={`/comic/${comic.id}`}>
-                <div className="group relative bg-card rounded-xl border border-border/70 overflow-hidden hover:border-primary/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-primary/10">
-                  
-                  
+                <div className="group h-full cursor-pointer border-[3px] border-[#12100c] bg-[#f8f5ec] transition-shadow hover:shadow-[6px_6px_0_#12100c]">
                   <div
-                    className={`w-full ${STYLE_GRADIENTS[comic.style] || STYLE_GRADIENTS.anime} relative`}
+                    className={`relative w-full overflow-hidden border-b-[3px] border-[#12100c] ${COVER_GROUND}`}
                     style={{ aspectRatio: previewAspectRatios[comic.id] ?? "16 / 9" }}
                   >
-                    <div className="absolute inset-0 bg-foreground/15 group-hover:bg-transparent transition-colors" />
-                    <div className="absolute top-4 right-4 bg-background/85 backdrop-blur-md px-2 py-1 rounded-md text-xs font-medium border border-border/70 capitalize">
+                    <span className="absolute right-0 top-0 z-10 border-b-[3px] border-l-[3px] border-[#12100c] bg-[#12100c] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#f2ede1]">
                       {comic.style}
-                    </div>
+                    </span>
                     {comic.panels?.[0]?.imageUrl &&
                       comic.panels[0].imageUrl !== "/assets/placeholder-panel.png" && (
                         <img
                           src={getDisplayImageUrl(comic.panels[0].imageUrl, "card")}
                           alt={comic.title}
-                          className="w-full h-full object-contain bg-muted/40"
+                          className="h-full w-full object-contain"
                           loading="lazy"
                           decoding="async"
                           onLoad={handlePreviewLoad(comic.id)}
@@ -156,37 +165,32 @@ export default function BrowsePage() {
                       )}
                   </div>
 
-                  <div className="p-5">
-                    <h3 className="text-xl font-bold font-display group-hover:text-primary transition-colors mb-1">
+                  <div className="space-y-3 p-5">
+                    <h3 className="font-display text-[22px] uppercase leading-none text-[#12100c] transition-colors group-hover:text-[#d8402f]">
                       {comic.title}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                      <User className="w-3 h-3" />
-                      <span>{comic.authorUsername}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+
+                    <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
+                      By {comic.authorUsername} · {formatDate(comic.createdAt)} ·{" "}
+                      {comic.panels?.length || 0} Panels
+                    </p>
+
+                    <p className="line-clamp-2 text-[14px] leading-relaxed text-[#4a4535]">
                       {comic.idea}
                     </p>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" /> {formatDate(comic.createdAt)}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Layout className="w-3.5 h-3.5" /> {comic.panels?.length || 0} Panels
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+
+                    <div className="flex items-center gap-4 border-t-[2px] border-[#ddd6c4] pt-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[#4a4535]">
                       <span className="flex items-center gap-1">
-                        <Heart className="w-3.5 h-3.5" /> {comic.ratingsCount ?? 0}
+                        <Heart className="h-3 w-3" /> {comic.ratingsCount ?? 0}
                       </span>
                       <span className="flex items-center gap-1">
-                        <MessageCircle className="w-3.5 h-3.5" /> {comic.commentsCount ?? 0}
+                        <MessageCircle className="h-3 w-3" /> {comic.commentsCount ?? 0}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Share2 className="w-3.5 h-3.5" /> {comic.shares ?? 0}
+                        <Share2 className="h-3 w-3" /> {comic.shares ?? 0}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Download className="w-3.5 h-3.5" /> {comic.downloads ?? 0}
+                        <Download className="h-3 w-3" /> {comic.downloads ?? 0}
                       </span>
                     </div>
                   </div>
@@ -195,15 +199,16 @@ export default function BrowsePage() {
             ))}
           </div>
           {hasMore && !debouncedSearch && (
-            <div className="mt-8 flex justify-center">
+            <div className="mt-12 flex justify-center">
               <Button
                 variant="outline"
+                size="lg"
                 onClick={() => fetchComics(offset, false)}
                 disabled={isLoadingMore}
               >
                 {isLoadingMore ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Loading...
                   </>
                 ) : (

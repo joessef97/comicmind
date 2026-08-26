@@ -189,7 +189,7 @@ export function ShareButtons({
       <Button
         variant="outline"
         size="sm"
-        className="gap-2 h-9 rounded-full border-white/10 hover:bg-white/5"
+        className="h-9 gap-2 border-[2px] border-[#12100c] text-[#12100c] hover:bg-[#12100c] hover:text-[#f2ede1]"
         onClick={handleCopyLink}
       >
         {copied ? (
@@ -205,12 +205,12 @@ export function ShareButtons({
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 h-9 rounded-full border-white/10 hover:bg-white/5"
+          className="h-9 gap-1.5 border-[2px] border-[#12100c] text-[#12100c] hover:bg-[#12100c] hover:text-[#f2ede1]"
           onClick={() => setDropdownOpen((o) => !o)}
           disabled={!!downloading}
         >
           {downloading ? (
-            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <span className="h-4 w-4 animate-spin border-2 border-current border-t-transparent" />
           ) : (
             <Download className="w-4 h-4" />
           )}
@@ -219,16 +219,16 @@ export function ShareButtons({
         </Button>
 
         {dropdownOpen && (
-          <div className="absolute top-full left-0 mt-1 z-50 min-w-[160px] rounded-lg border border-white/10 bg-popover p-1 shadow-lg">
+          <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] border-[3px] border-[#12100c] bg-[#f8f5ec] p-1">
             <button
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-[#12100c] transition-colors hover:bg-[#ddd6c4]"
               onClick={() => handleDownload("png")}
             >
               <FileImage className="w-4 h-4" />
               Download PNG
             </button>
             <button
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+              className="flex w-full items-center gap-2 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-[#12100c] transition-colors hover:bg-[#ddd6c4]"
               onClick={() => handleDownload("pdf")}
             >
               <FileText className="w-4 h-4" />

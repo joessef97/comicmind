@@ -105,7 +105,7 @@ export function ShareButtons({
       <Button
         variant="outline"
         size="sm"
-        className="gap-1.5 h-9 rounded-full px-4"
+        className="h-9 gap-1.5 px-4"
         onClick={handleCopyLink}
       >
         {copied ? <Check className="w-4 h-4 text-green-400" /> : <Link2 className="w-4 h-4" />}
@@ -115,7 +115,7 @@ export function ShareButtons({
       <Button
         variant="outline"
         size="sm"
-        className="gap-1.5 h-9 rounded-full px-4"
+        className="h-9 gap-1.5 px-4"
         onClick={handleDownloadForInstagram}
         disabled={downloading || !imageUrl}
       >

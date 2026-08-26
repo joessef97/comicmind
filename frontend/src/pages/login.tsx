@@ -46,38 +46,40 @@ export default function Login() {
   };
 
   return (
-    <PageLayout className="bg-background text-foreground font-sans">
-      <main className="container max-w-md mx-auto px-4 py-20">
-        <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="text-center space-y-2 mb-8">
-            <h1 className="text-3xl font-display font-bold tracking-tight">Welcome Back</h1>
-            <p className="text-muted-foreground text-sm">Log in to continue creating comics</p>
+    <PageLayout>
+      <main className="container mx-auto max-w-md px-4 py-20">
+        <div className="border-[3px] border-[#12100c] bg-[#f8f5ec] hard-shadow">
+          <div className="border-b-4 border-[#12100c] px-8 py-6">
+            <h1 className="font-display text-[34px] uppercase leading-none text-[#12100c]">
+              Welcome Back
+            </h1>
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
+              Log in to continue creating comics
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 p-8">
             {error && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg p-3">
+              <div className="border-[3px] border-[#12100c] bg-[#d8402f] p-3 font-mono text-[11px] uppercase tracking-[0.1em] text-[#f2ede1]">
                 {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-bold text-muted-foreground">Username</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter username"
-                className="h-12 bg-muted/50 border-border/80 focus:border-primary/50"
+                className="h-12"
                 required
                 maxLength={30}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-bold text-muted-foreground">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -85,7 +87,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter password"
-                  className="h-12 bg-muted/50 border-border/80 focus:border-primary/50 pr-12"
+                  className="h-12 pr-12"
                   required
                   minLength={8}
                   maxLength={128}
@@ -93,9 +95,9 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6d675a] transition-colors hover:text-[#12100c]"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
@@ -103,25 +105,29 @@ export default function Login() {
             <Button
               type="submit"
               disabled={isLoading || !username || !password}
-              className="w-full h-12 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+              size="lg"
+              className="w-full"
             >
               {isLoading ? (
-                <><Loader2 className="mr-2 w-5 h-5 animate-spin" /> Logging in...</>
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Logging in...</>
               ) : (
-                <>Log In <ArrowRight className="ml-2 w-5 h-5" /></>
+                <>Log In <ArrowRight className="ml-2 h-5 w-5" /></>
               )}
             </Button>
 
             <div className="text-center">
-              <Link href="/forgot-password" className="text-sm text-primary hover:underline font-medium">
+              <Link
+                href="/forgot-password"
+                className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#d8402f] hover:underline"
+              >
                 Forgot your password?
               </Link>
             </div>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          <p className="border-t-[3px] border-[#12100c] px-8 py-5 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
             Don't have an account?{" "}
-            <Link href={registerHref} className="text-primary hover:underline font-medium">
+            <Link href={registerHref} className="text-[#d8402f] hover:underline">
               Sign up
             </Link>
           </p>
