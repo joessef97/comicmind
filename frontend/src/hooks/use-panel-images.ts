@@ -59,46 +59,104 @@ export function usePublicComics(limit = 12): PublicComic[] {
 }
 
 /**
- * Consecutive panels from a single published comic — the same cast in order.
- * Picks the comic with the most usable panels so the run is as long as
- * possible. Returns [] until the fetch lands or if nothing qualifies.
+ * Consecutive panels from a single published comic — the same cast, in order.
+ *
+ * Needs a second request: the list endpoint deliberately trims each comic to
+ * its first panel for light list cards (see getPublicComicPreviews), so a run
+ * has to come from the detail endpoint, which returns the full set.
+ *
+ * Returns empty until both requests land, or if no published comic has enough
+ * real panels to make the point.
  */
 export function useComicRun(count: number): { title: string; panels: string[] } {
   const comics = usePublicComics(12);
+  const [run, setRun] = useState<{ title: string; panels: string[] }>({
+    title: "",
+    panels: [],
+  });
 
-  const best = comics
-    .map((comic) => ({
-      title: comic.title,
-      panels: comic.panels.map((p) => p?.imageUrl).filter(isRealPanel),
-    }))
-    .sort((a, b) => b.panels.length - a.panels.length)[0];
+  // Candidates are ordered newest first; the first one with a usable run wins.
+  const candidateIds = comics
+    .filter((comic) => isRealPanel(comic.panels[0]?.imageUrl))
+    .map((comic) => comic.id)
+    .join(",");
 
-  if (!best || best.panels.length === 0) return { title: "", panels: [] };
+  useEffect(() => {
+    if (!candidateIds) return;
+    let cancelled = false;
 
-  return {
-    title: best.title,
-    panels: best.panels.slice(0, count).map((url) => getDisplayImageUrl(url, "card")),
-  };
+    async function load() {
+      for (const id of candidateIds.split(",")) {
+        try {
+          const res = await fetch(`/api/comics/public/${id}`);
+          if (!res.ok) continue;
+          const comic = await res.json();
+
+          const panels: string[] = (comic?.panels ?? [])
+            .map((p: { imageUrl?: string }) => p?.imageUrl)
+            .filter(isRealPanel);
+
+          if (panels.length >= count) {
+            if (!cancelled) {
+              setRun({
+                title: comic.title ?? "",
+                panels: panels.slice(0, count).map((url) => getDisplayImageUrl(url, "card")),
+              });
+            }
+            return;
+          }
+        } catch {
+          // Try the next candidate.
+        }
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [candidateIds, count]);
+
+  return run;
 }
 
 /**
- * A spread of panel art across many different comics, for decorative slots
- * that just need real work on screen rather than one continuous story.
+ * A spread of cover art across different comics, for decorative slots that
+ * just need real work on screen rather than one continuous story. Cycles the
+ * available covers to fill `count` so slots never render empty on a site with
+ * only a handful of published comics.
  */
 export function usePanelImages(count: number): string[] {
   const comics = usePublicComics(12);
 
-  const urls: string[] = [];
-  // Take one panel per comic first so the spread shows variety.
-  for (let round = 0; urls.length < count && round < 6; round += 1) {
-    for (const comic of comics) {
-      const url = comic.panels[round]?.imageUrl;
-      if (isRealPanel(url) && !urls.includes(url)) {
-        urls.push(url);
-        if (urls.length === count) break;
-      }
+  const covers = comics
+    .map((comic) => comic.panels[0]?.imageUrl)
+    .filter(isRealPanel);
+
+  if (!covers.length) return [];
+
+  return Array.from({ length: count }, (_, i) =>
+    getDisplayImageUrl(covers[i % covers.length], "card"),
+  );
+}
+
+/**
+ * One real cover per art style, keyed by style id.
+ *
+ * The style showcase must not illustrate "noir" with a watercolour panel, so
+ * a card only gets art when a published comic actually used that style —
+ * otherwise it keeps the hatch rather than showing something misleading.
+ */
+export function useStyleSamples(): Record<string, string> {
+  const comics = usePublicComics(12);
+
+  const samples: Record<string, string> = {};
+  for (const comic of comics) {
+    const url = comic.panels[0]?.imageUrl;
+    if (comic.style && isRealPanel(url) && !samples[comic.style]) {
+      samples[comic.style] = getDisplayImageUrl(url, "card");
     }
   }
 
-  return urls.map((url) => getDisplayImageUrl(url, "card"));
+  return samples;
 }
