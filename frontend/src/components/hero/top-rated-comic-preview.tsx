@@ -74,8 +74,8 @@ export function TopRatedComicPreview() {
   // Fallback: no comic
   if (!loading && !comic) {
     return (
-      <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/70 shadow-2xl bg-card flex items-center justify-center">
-        <p className="text-muted-foreground text-lg">No top-rated comics yet</p>
+      <div className="art-placeholder-ink relative flex aspect-video items-center justify-center overflow-hidden">
+        <p className="label-mono text-[#a39b8b]">No top-rated comics yet</p>
       </div>
     );
   }
@@ -83,8 +83,8 @@ export function TopRatedComicPreview() {
   // Loading state
   if (loading || !comic) {
     return (
-      <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/70 shadow-2xl bg-card flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="art-placeholder-ink relative flex aspect-video items-center justify-center overflow-hidden">
+        <div className="h-8 w-8 animate-spin border-[3px] border-[#f2b32e] border-t-transparent" />
       </div>
     );
   }
@@ -92,18 +92,15 @@ export function TopRatedComicPreview() {
   const panels = comic.panels.filter((p) => p.imageUrl);
   if (!panels.length) {
     return (
-      <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/70 shadow-2xl bg-card flex items-center justify-center">
-        <p className="text-muted-foreground text-lg">No top-rated comics yet</p>
+      <div className="art-placeholder-ink relative flex aspect-video items-center justify-center overflow-hidden">
+        <p className="label-mono text-[#a39b8b]">No top-rated comics yet</p>
       </div>
     );
   }
 
   return (
     <Link href={`/comic/${comic._id}`}>
-    <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/70 shadow-2xl bg-card group cursor-pointer">
-      {/* Glowing purple border */}
-      <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-purple-500 via-primary to-purple-500 opacity-50 blur-sm group-hover:opacity-70 transition-opacity duration-700 -z-10" />
-
+    <div className="group relative aspect-video cursor-pointer overflow-hidden bg-[#1b1811]">
       {/* Panel image with fade + zoom */}
       <div
         className="absolute inset-0 transition-all duration-700 ease-in-out"
@@ -122,28 +119,25 @@ export function TopRatedComicPreview() {
         />
       </div>
 
-      {/* Top gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
-
       {/* Badge */}
-      <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-primary/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-        <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+      <div className="absolute left-0 top-0 flex items-center gap-1.5 border-b-[3px] border-r-[3px] border-[#12100c] bg-[#f2b32e] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#12100c]">
+        <Star className="h-3 w-3 fill-[#12100c]" />
         Top Rated Comic
       </div>
 
       {/* Info bar */}
-      <div className="absolute bottom-0 inset-x-0 p-4 space-y-2">
-        <h3 className="text-white font-bold text-lg leading-tight truncate">
+      <div className="absolute inset-x-0 bottom-0 space-y-1.5 border-t-[3px] border-[#f2ede1] bg-[#12100c] p-3">
+        <h3 className="truncate font-display text-lg uppercase leading-none text-[#f2ede1]">
           {comic.title}
         </h3>
-        <div className="flex items-center gap-3 text-sm text-white/80">
+        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[#a39b8b]">
           <span className="flex items-center gap-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+            <Star className="h-3 w-3 fill-[#f2b32e] text-[#f2b32e]" />
             {comic.averageRating.toFixed(1)}
           </span>
-          <span className="text-white/50">·</span>
+          <span>·</span>
           <span>{comic.ratingsCount} rating{comic.ratingsCount !== 1 ? "s" : ""}</span>
-          <span className="text-white/50">·</span>
+          <span>·</span>
           <span>by {comic.authorName}</span>
         </div>
 
@@ -160,10 +154,10 @@ export function TopRatedComicPreview() {
                     setFade(true);
                   }, 200);
                 }}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
+                className={`h-1.5 transition-all duration-300 ${
                   i === currentPanel
-                    ? "w-6 bg-primary"
-                    : "w-1.5 bg-white/40 hover:bg-white/60"
+                    ? "w-6 bg-[#d8402f]"
+                    : "w-1.5 bg-[#a39b8b] hover:bg-[#f2ede1]"
                 }`}
                 aria-label={`Go to panel ${i + 1}`}
               />
