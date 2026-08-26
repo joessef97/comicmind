@@ -9,6 +9,7 @@ import {
   usePanelImages,
   usePublicComics,
   useComicRun,
+  useStyleSamples,
   type PublicComic,
 } from "@/hooks/use-panel-images";
 import { getDisplayImageUrl } from "@/lib/utils";
@@ -213,7 +214,11 @@ function ConsistencyBand() {
 
   return (
     <section className="border-b-4 border-[#12100c] bg-[#f2ede1] px-6 py-16 lg:px-12 lg:py-20">
-      <div className="container mx-auto grid gap-12 lg:grid-cols-2 lg:items-center">
+      <div
+        className={`container mx-auto grid gap-12 lg:items-center ${
+          run.panels.length ? "lg:grid-cols-2" : ""
+        }`}
+      >
         <div className="space-y-5">
           <span className="label-mono text-[#d8402f]">The hard part</span>
           <h2 className="font-display text-[38px] uppercase leading-[0.95] text-[#12100c] sm:text-[52px]">
@@ -226,16 +231,16 @@ function ConsistencyBand() {
           </p>
         </div>
 
-        <ThumbnailRow
-          label="ComicMind"
-          variant="solid"
-          images={run.panels}
-          caption={
-            run.title
-              ? `From "${run.title}" — panels 1–4, one unbroken run, same cast`
-              : undefined
-          }
-        />
+        {/* Shown only when a real four-panel run exists — a half-filled grid of
+            empty boxes would undercut the very claim being made. */}
+        {run.panels.length > 0 && (
+          <ThumbnailRow
+            label="ComicMind"
+            variant="solid"
+            images={run.panels}
+            caption={`From "${run.title}" — panels 1–4, one unbroken run, same cast`}
+          />
+        )}
       </div>
     </section>
   );
@@ -482,7 +487,7 @@ function EditorDemoBand() {
 /* -------------------------------------------------------------------------- */
 
 function StylesBand() {
-  const images = usePanelImages(6);
+  const samples = useStyleSamples();
 
   return (
     <section className="border-b-4 border-[#12100c] bg-[#f2ede1] px-6 py-16 lg:px-12 lg:py-20">
@@ -495,17 +500,16 @@ function StylesBand() {
         </div>
 
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {STYLES.map((style, index) => (
+          {STYLES.map((style) => (
             <div
               key={style.id}
               className={`border-[3px] border-[#12100c] bg-[#f8f5ec] ${style.shadow}`}
             >
               <div className="art-placeholder aspect-[4/3] overflow-hidden border-b-[3px] border-[#12100c]">
-                {images[index] && (
+                {samples[style.id] && (
                   <img
-                    src={images[index]}
-                    alt=""
-                    aria-hidden
+                    src={samples[style.id]}
+                    alt={`A comic panel drawn in the ${style.name} style`}
                     className="h-full w-full object-cover"
                     loading="lazy"
                     decoding="async"
