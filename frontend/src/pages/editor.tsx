@@ -646,36 +646,63 @@ export default function Editor() {
       { key: "story", label: "Story", icon: PenTool },
       { key: "style", label: "Style", icon: Palette },
     ];
+    const order = ["title", "story", "style"];
+    const currentIndex = order.indexOf(step);
 
     return (
-      <div className="flex items-center justify-center gap-4 mb-12">
-        {steps.map((s, i) => (
-          <div key={s.key} className="flex items-center gap-4">
-            <div className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300",
-              step === s.key || (step === "generating" && s.key === "style") || step === "result"
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                : "bg-muted/50 text-muted-foreground"
-            )}>
-              <s.icon className="w-4 h-4" />
-              <span className="text-sm font-bold">{s.label}</span>
+      <div className="mb-12 flex items-stretch border-[3px] border-[#f2ede1]">
+        {steps.map((s, i) => {
+          const done = step === "result" || (currentIndex > -1 ? i < currentIndex : true);
+          const current = step === s.key || (step === "generating" && s.key === "style");
+
+          return (
+            <div
+              key={s.key}
+              className={cn(
+                "flex flex-1 items-center gap-3 px-4 py-3 transition-colors",
+                i > 0 && "border-l-[3px] border-[#f2ede1]",
+                current ? "bg-[#241f16]" : "bg-transparent",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center border-[3px] border-[#f2ede1] font-display text-[15px]",
+                  current
+                    ? "bg-[#d8402f] text-[#f2ede1]"
+                    : done
+                      ? "bg-[#f2b32e] text-[#12100c]"
+                      : "bg-transparent text-[#a39b8b]",
+                )}
+              >
+                {i + 1}
+              </span>
+              <s.icon className={cn("h-4 w-4 shrink-0", current ? "text-[#f2ede1]" : "text-[#a39b8b]")} />
+              <span
+                className={cn(
+                  "font-mono text-[11px] uppercase tracking-[0.12em]",
+                  current ? "text-[#f2ede1]" : "text-[#a39b8b]",
+                )}
+              >
+                {s.label}
+              </span>
             </div>
-            {i < steps.length - 1 && <div className="h-px w-8 bg-border/80" />}
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
 
   return (
-    <PageLayout className="bg-background text-foreground font-sans selection:bg-primary/30">
+    <PageLayout className="bg-[#12100c] text-[#f2ede1]">
 
       {isLoadingDraft ? (
-        <main className="container mx-auto px-4 py-16 max-w-2xl">
-          <div className="bg-card border border-border/70 rounded-2xl p-12 shadow-2xl">
+        <main className="container mx-auto max-w-2xl px-4 py-16">
+          <div className="border-[3px] border-[#f2ede1] bg-[#1b1811] p-12">
             <div className="flex flex-col items-center gap-6 text-center">
-              <Loader2 className="w-10 h-10 text-primary animate-spin" />
-              <p className="text-muted-foreground">Loading project...</p>
+              <Loader2 className="h-10 w-10 animate-spin text-[#f2b32e]" />
+              <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#a39b8b]">
+                Loading project...
+              </p>
             </div>
           </div>
         </main>
@@ -688,45 +715,44 @@ export default function Editor() {
 
         {/* Draft indicator bar */}
         {draftId && step !== "generating" && step !== "result" && (
-          <div className="flex items-center justify-between bg-muted/50 border border-border/70 rounded-xl px-4 py-2 mb-6 text-xs">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <FileText className="w-3.5 h-3.5" />
+          <div className="mb-6 flex items-center justify-between border-[3px] border-[#4a4535] bg-[#1b1811] px-4 py-2">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a39b8b]">
+              <FileText className="h-3.5 w-3.5" />
               <span>Draft auto-saved</span>
-              {isSavingDraft && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+              {isSavingDraft && <Loader2 className="h-3 w-3 animate-spin text-[#f2b32e]" />}
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleSaveDraft}
               disabled={isSavingDraft}
-              className="h-7 text-xs text-muted-foreground hover:text-primary"
+              className="h-7 border-2 border-[#4a4535] text-[#a39b8b] hover:border-[#f2ede1] hover:text-[#f2ede1]"
             >
-              <Save className="w-3 h-3 mr-1" /> Save Draft
+              <Save className="mr-1 h-3 w-3" /> Save Draft
             </Button>
           </div>
         )}
 
         {/* Title Step */}
         {step === "title" && (
-          <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="border-[3px] border-[#f2ede1] bg-[#1b1811] p-8">
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-2">
-                <h1 className="text-4xl font-display font-bold tracking-tight">Name Your Comic</h1>
-                <p className="text-muted-foreground">Give your comic a memorable title</p>
+                <h1 className="font-display text-[40px] uppercase leading-none text-[#f2ede1]">Name Your Comic</h1>
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#a39b8b]">Give your comic a memorable title</p>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-bold text-muted-foreground">Comic Title</Label>
+                <Label className="text-[#a39b8b]">Comic Title</Label>
                 <div className="relative">
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Enter title..."
                     maxLength={50}
-                    className="h-14 bg-muted/50 border-border/80 focus:border-primary/50 text-lg px-4 transition-all"
+                    className="h-14 border-[3px] border-[#f2ede1] bg-[#12100c] px-4 text-lg text-[#f2ede1] placeholder:text-[#6d675a]"
                   />
-                  <div className="absolute right-4 bottom-[-24px] text-[10px] text-muted-foreground font-mono">
+                  <div className="absolute right-4 bottom-[-24px] font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
                     {title.length}/50
                   </div>
                 </div>
@@ -735,7 +761,7 @@ export default function Editor() {
               <Button
                 onClick={() => setStep("story")}
                 disabled={!title.trim()}
-                className="w-full h-14 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 transition-all font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+                className="h-14 w-full border-[3px] border-[#f2ede1] shadow-[7px_7px_0_#f2ede1]"
               >
                 Continue <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
@@ -745,36 +771,35 @@ export default function Editor() {
 
         {/* Story Step */}
         {step === "story" && (
-          <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="border-[3px] border-[#f2ede1] bg-[#1b1811] p-8">
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-2">
-                <h1 className="text-4xl font-display font-bold tracking-tight">Tell Your Story</h1>
-                <p className="text-muted-foreground">Describe the plot of your 6-panel comic</p>
+                <h1 className="font-display text-[40px] uppercase leading-none text-[#f2ede1]">Tell Your Story</h1>
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#a39b8b]">Describe the plot of your 6-panel comic</p>
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-bold text-muted-foreground">Story Premise</Label>
+                <Label className="text-[#a39b8b]">Story Premise</Label>
                 <div className="relative">
                   <Textarea
                     value={premise}
                     onChange={(e) => setPremise(e.target.value)}
                     placeholder="Once upon a time..."
                     maxLength={1000}
-                    className="min-h-[160px] bg-muted/50 border-border/80 focus:border-primary/50 text-base p-4 resize-none transition-all"
+                    className="min-h-[160px] resize-none border-[3px] border-[#f2ede1] bg-[#12100c] p-4 text-base text-[#f2ede1] placeholder:text-[#6d675a]"
                   />
-                  <div className="absolute right-4 bottom-[-24px] text-[10px] text-muted-foreground font-mono">
+                  <div className="absolute right-4 bottom-[-24px] font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">
                     {premise.length}/1000
                   </div>
                 </div>
               </div>
 
-              <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 space-y-3">
-                <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                  <Sparkles className="w-4 h-4" />
+              <div className="space-y-3 border-[3px] border-[#4a4535] bg-[#12100c] p-4">
+                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[#f2b32e]">
+                  <Sparkles className="h-4 w-4" />
                   Tips for a great story
                 </div>
-                <ul className="text-xs text-muted-foreground space-y-2 list-disc list-inside">
+                <ul className="list-inside list-disc space-y-2 text-[13px] leading-relaxed text-[#a39b8b]">
                   <li>Include a clear beginning, conflict, and resolution</li>
                   <li>Describe key characters and their motivations</li>
                   <li>Keep it concise - 6 panels go quickly!</li>
@@ -785,14 +810,14 @@ export default function Editor() {
                 <Button
                   variant="outline"
                   onClick={() => setStep("title")}
-                  className="flex-1 h-14 border-border/80 hover:bg-muted/70 font-bold"
+                  className="h-14 flex-1 border-[3px] border-[#f2ede1] text-[#f2ede1] hover:bg-[#f2ede1] hover:text-[#12100c]"
                 >
                   <ArrowLeft className="mr-2 w-5 h-5" /> Back
                 </Button>
                 <Button
                   onClick={() => setStep("style")}
                   disabled={!premise.trim()}
-                  className="flex-[2] h-14 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 transition-all font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+                  className="h-14 flex-[2] border-[3px] border-[#f2ede1] shadow-[7px_7px_0_#f2ede1]"
                 >
                   Continue <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
@@ -803,60 +828,59 @@ export default function Editor() {
 
         {/* Style Step */}
         {step === "style" && (
-          <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="border-[3px] border-[#f2ede1] bg-[#1b1811] p-8">
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-2">
-                <h1 className="text-4xl font-display font-bold tracking-tight">Choose Your Style</h1>
-                <p className="text-muted-foreground">Select the visual style for your comic</p>
+                <h1 className="font-display text-[40px] uppercase leading-none text-[#f2ede1]">Choose Your Style</h1>
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#a39b8b]">Select the visual style for your comic</p>
               </div>
 
               <div className="space-y-4">
-                <Label className="text-sm font-bold text-muted-foreground">Art Style</Label>
+                <Label className="text-[#a39b8b]">Art Style</Label>
                 <div className="grid grid-cols-3 gap-3">
                   {ART_STYLES.map((s) => (
                     <button
                       key={s.id}
                       onClick={() => setSelectedStyle(s.id)}
                       className={cn(
-                        "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all group",
+                        "group flex flex-col items-center gap-3 border-[3px] p-4 transition-colors",
                         selectedStyle === s.id
-                          ? "bg-primary/10 border-primary shadow-lg shadow-primary/10"
-                          : "bg-muted/50 border-border/80 hover:border-border"
+                          ? "border-[#f2b32e] bg-[#241f16]"
+                          : "border-[#4a4535] bg-[#12100c] hover:border-[#f2ede1]"
                       )}
                     >
-                      <span className="text-2xl grayscale group-hover:grayscale-0 transition-all">{s.icon}</span>
+                      <span className="text-2xl grayscale transition-all group-hover:grayscale-0">{s.icon}</span>
                       <span className={cn(
-                        "text-xs font-bold",
-                        selectedStyle === s.id ? "text-primary" : "text-muted-foreground"
+                        "font-mono text-[10px] uppercase tracking-[0.12em]",
+                        selectedStyle === s.id ? "text-[#f2b32e]" : "text-[#a39b8b]"
                       )}>{s.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 space-y-2">
-                <div className="flex items-center gap-2 text-[#ff0080] font-bold text-sm">
-                  <AlertTriangle className="w-4 h-4" />
+              <div className="space-y-2 border-[3px] border-[#d8402f] bg-[#12100c] p-4">
+                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[#d8402f]">
+                  <AlertTriangle className="h-4 w-4" />
                   Content Guidelines
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-[13px] leading-relaxed text-[#a39b8b]">
                   Our AI ensures all generated content is family-friendly. Violent, explicit, or harmful content will be filtered automatically.
                 </p>
               </div>
 
-              <div className="bg-muted/50 border border-border/70 rounded-xl p-6 space-y-4">
-                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Your Comic Summary</h3>
+              <div className="space-y-4 border-[3px] border-[#4a4535] bg-[#12100c] p-6">
+                <h3 className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#a39b8b]">Your Comic Summary</h3>
                 <div className="space-y-2">
-                  <div className="flex gap-2 text-sm">
-                    <span className="text-muted-foreground font-medium">Title:</span>
-                    <span className="font-bold">{title}</span>
+                  <div className="flex gap-2 font-mono text-[11px] uppercase tracking-[0.1em]">
+                    <span className="text-[#6d675a]">Title:</span>
+                    <span className="text-[#f2ede1]">{title}</span>
                   </div>
-                  <div className="flex gap-2 text-sm">
-                    <span className="text-muted-foreground font-medium">Style:</span>
-                    <span className="font-bold">{ART_STYLES.find(s => s.id === selectedStyle)?.name}</span>
+                  <div className="flex gap-2 font-mono text-[11px] uppercase tracking-[0.1em]">
+                    <span className="text-[#6d675a]">Style:</span>
+                    <span className="text-[#f2ede1]">{ART_STYLES.find(s => s.id === selectedStyle)?.name}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground italic line-clamp-2 mt-2">"{premise}"</p>
+                  <p className="mt-3 line-clamp-2 text-[13px] italic leading-relaxed text-[#a39b8b]">"{premise}"</p>
                 </div>
               </div>
 
@@ -864,14 +888,14 @@ export default function Editor() {
                 <Button
                   variant="outline"
                   onClick={() => setStep("story")}
-                  className="flex-1 h-14 border-border/80 hover:bg-muted/70 font-bold"
+                  className="h-14 flex-1 border-[3px] border-[#f2ede1] text-[#f2ede1] hover:bg-[#f2ede1] hover:text-[#12100c]"
                 >
                   <ArrowLeft className="mr-2 w-5 h-5" /> Back
                 </Button>
                 <Button
                   onClick={() => handleGenerate()}
                   disabled={isGeneratingStory || isGeneratingImages || isSavingDraft}
-                  className="flex-[2] h-14 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 transition-all font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+                  className="h-14 flex-[2] border-[3px] border-[#f2ede1] shadow-[7px_7px_0_#f2ede1]"
                 >
                   <><Wand2 className="mr-2 w-5 h-5" /> Generate Comic</>
                 </Button>
@@ -882,26 +906,23 @@ export default function Editor() {
 
         {/* Generating Step */}
         {step === "generating" && (
-          <div className="bg-card border border-border/70 rounded-2xl p-12 shadow-2xl">
+          <div className="border-[3px] border-[#f2ede1] bg-[#1b1811] p-12">
             <div className="flex flex-col items-center gap-6 text-center animate-in fade-in duration-500">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                </div>
-                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+              <div className="flex h-20 w-20 items-center justify-center border-[3px] border-[#f2ede1] bg-[#12100c]">
+                <Loader2 className="h-10 w-10 animate-spin text-[#f2b32e]" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl font-display font-bold">
+              <div className="space-y-3">
+                <h2 className="font-display text-[30px] uppercase leading-none text-[#f2ede1]">
                   {isGeneratingStory ? "Writing Your Story..." : "Creating Panel Images..."}
                 </h2>
-                <p className="text-muted-foreground text-sm max-w-md">
+                <p className="max-w-md font-mono text-[11px] uppercase tracking-[0.1em] text-[#a39b8b]">
                   {generationProgress}
                 </p>
               </div>
               {isGeneratingImages && (
-                <div className="w-full max-w-xs bg-muted/60 rounded-full h-2 overflow-hidden">
+                <div className="h-3 w-full max-w-xs overflow-hidden border-2 border-[#f2ede1] bg-[#12100c]">
                   <div
-                    className="h-full bg-gradient-to-r from-primary to-[#d946ef] rounded-full transition-all duration-500"
+                    className="h-full bg-[#f2b32e] transition-all duration-500"
                     style={{ width: `${panelProgress.total ? (panelProgress.done / panelProgress.total) * 100 : 0}%` }}
                   />
                 </div>
@@ -913,14 +934,14 @@ export default function Editor() {
         {/* Result Step */}
         {step === "result" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-end justify-between gap-6 border-b-[3px] border-[#f2ede1] pb-6">
               <div>
-                <h1 className="text-3xl font-display font-bold">{title}</h1>
-                <p className="text-muted-foreground text-sm mt-1">
+                <h1 className="font-display text-[36px] uppercase leading-none text-[#f2ede1]">{title}</h1>
+                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-[#a39b8b]">
                   {ART_STYLES.find(s => s.id === selectedStyle)?.name} style &middot; {panels.length} panels
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -937,7 +958,7 @@ export default function Editor() {
                     setForceRegenerateRef(false);
                     setLocation("/editor/new");
                   }}
-                  className="border-border/80 hover:bg-muted/70"
+                  className="border-[3px] border-[#f2ede1] text-[#f2ede1] hover:bg-[#f2ede1] hover:text-[#12100c]"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" /> New Comic
                 </Button>
@@ -953,7 +974,7 @@ export default function Editor() {
                     isSavingDraft ||
                     panels.length === 0
                   }
-                  className="border-border/80 hover:bg-muted/70"
+                  className="border-[3px] border-[#f2ede1] text-[#f2ede1] hover:bg-[#f2ede1] hover:text-[#12100c]"
                 >
                   <Wand2 className="w-4 h-4 mr-2" /> Regenerate Comic
                 </Button>
@@ -966,14 +987,14 @@ export default function Editor() {
                       description: "Click Generate Comic to create a fresh reference sheet.",
                     });
                   }}
-                  className="border-border/80 hover:bg-muted/70"
+                  className="border-[3px] border-[#f2ede1] text-[#f2ede1] hover:bg-[#f2ede1] hover:text-[#12100c]"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" /> Regenerate Reference Next Run
                 </Button>
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="bg-primary hover:bg-primary/90"
+                  className="border-[3px] border-[#f2ede1] shadow-[5px_5px_0_#f2ede1]"
                 >
                   {isSaving ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
@@ -981,12 +1002,13 @@ export default function Editor() {
                     <><Save className="w-4 h-4 mr-2" /> Save Comic</>
                   )}
                 </Button>
+                {/* Publish is the confirm action, so it takes the yellow fill. */}
                 <Button
                   onClick={handlePublish}
                   disabled={isPublishing}
                   className={isPublished
-                    ? "bg-orange-600 hover:bg-orange-700"
-                    : "bg-green-600 hover:bg-green-700"
+                    ? "border-[3px] border-[#f2ede1] bg-[#4a4535] text-[#f2ede1]"
+                    : "border-[3px] border-[#f2ede1] bg-[#f2b32e] text-[#12100c] shadow-[5px_5px_0_#f2ede1]"
                   }
                 >
                   {isPublishing ? (
@@ -1000,16 +1022,18 @@ export default function Editor() {
 
             {/* Per-panel progress banner while images are still generating */}
             {isGeneratingImages && (
-              <div className="flex items-center gap-3 bg-card border border-border/70 rounded-xl px-4 py-3">
-                <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
-                <span className="text-sm text-muted-foreground">{generationProgress}</span>
-                <div className="flex-1 bg-muted/60 rounded-full h-1.5 overflow-hidden">
+              <div className="flex items-center gap-3 border-[3px] border-[#f2ede1] bg-[#1b1811] px-4 py-3">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#f2b32e]" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#a39b8b]">
+                  {generationProgress}
+                </span>
+                <div className="h-2 flex-1 overflow-hidden border-2 border-[#4a4535] bg-[#12100c]">
                   <div
-                    className="h-full bg-gradient-to-r from-primary to-[#d946ef] rounded-full transition-all duration-500"
+                    className="h-full bg-[#f2b32e] transition-all duration-500"
                     style={{ width: `${panelProgress.total ? (panelProgress.done / panelProgress.total) * 100 : 0}%` }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground font-mono">{panelProgress.done}/{panelProgress.total}</span>
+                <span className="font-mono text-[10px] text-[#a39b8b]">{panelProgress.done}/{panelProgress.total}</span>
               </div>
             )}
 
@@ -1038,7 +1062,7 @@ export default function Editor() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleRetryPanel(panel)}
-                      className="text-xs border-destructive/20 text-destructive hover:bg-destructive/10"
+                      className="border-[3px] border-[#d8402f] text-[#d8402f] hover:bg-[#d8402f] hover:text-[#f2ede1]"
                     >
                       <RefreshCw className="w-3 h-3 mr-1" /> Retry Panel {idx + 1}
                     </Button>
@@ -1049,21 +1073,22 @@ export default function Editor() {
 
             {/* Panel Details */}
             {panels[selectedPanel] && (
-              <div className="bg-card border border-border/70 rounded-2xl p-6 space-y-4">
+              <div className="border-[3px] border-[#f2ede1] bg-[#1b1811] p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-display font-bold text-lg">Panel {selectedPanel + 1}</h3>
+                  <h3 className="font-display text-[22px] uppercase leading-none text-[#f2ede1]">
+                    Panel {selectedPanel + 1}
+                  </h3>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
-                        variant="outline"
                         size="sm"
-                        className="text-xs border-primary/30 text-primary hover:bg-primary/10"
+                        className="border-[3px] border-[#f2ede1] bg-[#d8402f] text-[#f2ede1]"
                       >
-                        <RefreshCw className="w-3 h-3 mr-1" />
+                        <RefreshCw className="mr-1 h-3 w-3" />
                         Regenerate Image
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-card border-border/80">
+                    <DropdownMenuContent align="end" className="border-[3px] border-[#12100c] bg-[#f8f5ec]">
                       {panels.map((panel, idx) => (
                         <DropdownMenuItem
                           key={panel.number}
@@ -1082,18 +1107,30 @@ export default function Editor() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="grid md:grid-cols-3 gap-4 text-sm">
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Description</span>
-                    <p>{panels[selectedPanel].description}</p>
+                <div className="grid gap-6 border-t-[3px] border-[#4a4535] pt-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-[#6d675a]">
+                      Description
+                    </span>
+                    <p className="text-[14px] leading-relaxed text-[#f2ede1]">
+                      {panels[selectedPanel].description}
+                    </p>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Dialogue</span>
-                    <p>{panels[selectedPanel].dialogue || "—"}</p>
+                  <div className="space-y-2">
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-[#6d675a]">
+                      Dialogue
+                    </span>
+                    <p className="text-[14px] leading-relaxed text-[#f2ede1]">
+                      {panels[selectedPanel].dialogue || "—"}
+                    </p>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Narration</span>
-                    <p>{panels[selectedPanel].narration || "—"}</p>
+                  <div className="space-y-2">
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-[#6d675a]">
+                      Narration
+                    </span>
+                    <p className="text-[14px] leading-relaxed text-[#f2ede1]">
+                      {panels[selectedPanel].narration || "—"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1110,27 +1147,27 @@ export default function Editor() {
           if (!open) setEditingPanel(null);
         }}
       >
-        <DialogContent className="sm:max-w-md bg-card border-border/80">
+        <DialogContent className="sm:max-w-md border-[3px] border-[#12100c] bg-[#f8f5ec]">
           <DialogHeader>
             <DialogTitle>Edit Panel {editingPanel?.number} Text</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground">Dialogue (speech bubble)</Label>
+              <Label >Dialogue (speech bubble)</Label>
               <Textarea
                 value={editDialogue}
                 onChange={(e) => setEditDialogue(e.target.value)}
                 placeholder="Character: What they say..."
-                className="min-h-[80px] bg-muted/50 border-border/80 resize-none"
+                className="min-h-[80px] resize-none"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground">Narration (caption box)</Label>
+              <Label >Narration (caption box)</Label>
               <Textarea
                 value={editNarration}
                 onChange={(e) => setEditNarration(e.target.value)}
                 placeholder="The narrator describes the scene..."
-                className="min-h-[80px] bg-muted/50 border-border/80 resize-none"
+                className="min-h-[80px] resize-none"
               />
             </div>
           </div>
@@ -1139,13 +1176,12 @@ export default function Editor() {
             <Button
               variant="outline"
               onClick={() => setEditingPanel(null)}
-              className="border-border/80 hover:bg-muted/70"
+              className="border-[3px] border-[#f2ede1] text-[#f2ede1] hover:bg-[#f2ede1] hover:text-[#12100c]"
               disabled={isSavingPanelText}
             >
               Cancel
             </Button>
             <Button
-              className="bg-primary hover:bg-primary/90"
               disabled={isSavingPanelText}
               onClick={async () => {
                 if (!editingPanel) return;

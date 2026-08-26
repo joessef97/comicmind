@@ -40,37 +40,39 @@ interface DashboardViewStateCache {
 
 let dashboardViewStateCache: DashboardViewStateCache | null = null;
 
-const STYLE_GRADIENTS: Record<string, string> = {
-  anime: "bg-gradient-to-br from-purple-900 to-indigo-900",
-  realistic: "bg-gradient-to-br from-slate-800 to-gray-900",
-  cartoon: "bg-gradient-to-br from-blue-900 to-cyan-900",
-  noir: "bg-gradient-to-br from-gray-900 to-black",
-  watercolor: "bg-gradient-to-br from-sky-900 to-teal-900",
-  retro: "bg-gradient-to-br from-amber-900 to-orange-900",
-};
+/** Panel previews sit on hatched ink until the art loads. */
+const COVER_GROUND = "art-placeholder-ink";
 
+/** Status stamps: draft yellow, generating blue, completed ink, failed red. */
 const STATUS_BADGES: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
   DRAFT: {
     label: "Draft",
-    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+    className: "bg-[#f2b32e] text-[#12100c]",
     icon: <FileText className="w-3 h-3" />,
   },
   GENERATING: {
     label: "Generating",
-    className: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    className: "bg-[#2f4fd8] text-[#f2ede1]",
     icon: <Loader2 className="w-3 h-3 animate-spin" />,
   },
   COMPLETED: {
     label: "Completed",
-    className: "bg-green-500/10 text-green-400 border-green-500/20",
+    className: "bg-[#12100c] text-[#f2ede1]",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
   FAILED: {
     label: "Failed",
-    className: "bg-red-500/10 text-red-400 border-red-500/20",
+    className: "bg-[#d8402f] text-[#f2ede1]",
     icon: <AlertCircle className="w-3 h-3" />,
   },
 };
+
+const STAMP_BASE =
+  "absolute left-0 top-0 z-10 flex items-center gap-1.5 border-b-[3px] border-r-[3px] border-[#12100c] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em]";
+const STYLE_STAMP =
+  "absolute right-0 top-0 z-10 border-b-[3px] border-l-[3px] border-[#12100c] bg-[#12100c] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#f2ede1]";
+const CARD_SHELL =
+  "group h-full cursor-pointer border-[3px] border-[#12100c] bg-[#f8f5ec] transition-shadow hover:shadow-[6px_6px_0_#12100c]";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -194,118 +196,122 @@ export default function Dashboard() {
   return (
     <PageLayout>
       <main className="container mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-display font-bold mb-2">Your Studio</h1>
-            <p className="text-muted-foreground">Manage your comic projects and drafts.</p>
+        <div className="mb-8 flex flex-col gap-6 border-b-4 border-[#12100c] pb-8 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-xl">
+            <h1 className="font-display text-[42px] uppercase leading-[0.95] text-[#12100c] sm:text-[58px]">
+              Your Studio
+            </h1>
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
+              Manage your comic projects and drafts.
+            </p>
             <SubscriptionStatus />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-shrink-0 items-center gap-3">
             {!isSubscribed && (
               <Button variant="outline" onClick={handleSubscribeNow}>
                 Subscribe Now
               </Button>
             )}
             <Link href="/editor/new">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="w-4 h-4 mr-2" /> New Comic
+              <Button>
+                <Plus className="mr-1 h-4 w-4" /> New Comic
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8">
+        {/* Tabs — joined square segments. */}
+        <div className="mb-10 inline-flex">
           {([
             { key: "all" as TabType, label: "All", count: comics.length + drafts.length },
             { key: "comics" as TabType, label: "Comics", count: comics.length },
             { key: "drafts" as TabType, label: "Drafts", count: drafts.length },
-          ]).map((tab) => (
+          ]).map((tab, index) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`border-2 border-[#12100c] px-5 py-2 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors ${
+                index > 0 ? "border-l-0" : ""
+              } ${
                 activeTab === tab.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  ? "bg-[#12100c] text-[#f2ede1]"
+                  : "bg-transparent text-[#4a4535] hover:bg-[#ddd6c4]"
               }`}
             >
               {tab.label}
-              <span className="ml-1.5 text-xs opacity-70">({tab.count})</span>
+              <span className="ml-1.5 opacity-70">({tab.count})</span>
             </button>
           ))}
         </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#d8402f]" />
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {/* Draft Cards */}
             {showDrafts && drafts.map((draft) => {
               const badge = STATUS_BADGES[draft.status] || STATUS_BADGES.DRAFT;
               return (
                 <Link key={`draft-${draft.id}`} href={`/editor/${draft.id}`}>
-                  <div className="group relative bg-card rounded-xl border border-border/70 overflow-hidden hover:border-primary/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-primary/10">
+                  <div className={CARD_SHELL}>
                     <div
-                      className={`w-full ${STYLE_GRADIENTS[draft.style] || STYLE_GRADIENTS.anime} relative`}
+                      className={`relative w-full overflow-hidden border-b-[3px] border-[#12100c] ${COVER_GROUND}`}
                       style={{ aspectRatio: previewAspectRatios[`draft-${draft.id}`] ?? "16 / 9" }}
                     >
-                      <div className="absolute inset-0 bg-foreground/15 group-hover:bg-transparent transition-colors" />
-                      {/* Status badge */}
-                      <div className={`absolute top-4 left-4 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${badge.className}`}>
+                      <div className={`${STAMP_BASE} ${badge.className}`}>
                         {badge.icon}
                         {badge.label}
                       </div>
-                      <div className="absolute top-4 right-4 bg-background/85 backdrop-blur-md px-2 py-1 rounded-md text-xs font-medium border border-border/70">
-                        {draft.style}
-                      </div>
+                      <div className={STYLE_STAMP}>{draft.style}</div>
                       {/* Show first panel image if available */}
                       {draft.panels?.[0]?.imageUrl && (
                         <img
                           src={draft.panels[0].imageUrl}
                           alt={draft.title}
-                          className="w-full h-full object-contain bg-muted/40"
+                          className="h-full w-full object-contain"
                           onLoad={handlePreviewLoad(`draft-${draft.id}`)}
                         />
                       )}
                     </div>
 
                     <div className="p-5">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-xl font-bold font-display group-hover:text-primary transition-colors">
+                      <div className="mb-3 flex items-start justify-between gap-2">
+                        <h3 className="font-display text-[22px] uppercase leading-none text-[#12100c] transition-colors group-hover:text-[#d8402f]">
                           {draft.title}
                         </h3>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-shrink-0 items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            className="h-8 w-8 text-[#6d675a] hover:text-[#d8402f]"
                             onClick={(e) => handleRegenerateProject(e, draft.id)}
                           >
-                            <Wand2 className="w-4 h-4" />
+                            <Wand2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            className="h-8 w-8 text-[#6d675a] hover:text-[#d8402f]"
                             onClick={(e) => handleDeleteDraft(e, draft.id)}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
 
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{draft.idea || "No description yet"}</p>
+                      <p className="mb-4 line-clamp-2 text-[14px] leading-relaxed text-[#4a4535]">
+                        {draft.idea || "No description yet"}
+                      </p>
 
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-4 border-t-[2px] border-[#ddd6c4] pt-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[#4a4535]">
                         <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" />
+                          <Clock className="h-3 w-3" />
                           {formatDate(draft.updatedAt)}
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Layout className="w-3.5 h-3.5" />
+                          <Layout className="h-3 w-3" />
                           {draft.panels?.length || 0} Panels
                         </div>
                       </div>
@@ -318,64 +324,65 @@ export default function Dashboard() {
             {/* Comic Cards */}
             {showComics && comics.map((comic) => (
               <Link key={`comic-${comic.id}`} href={`/editor/${comic.id}`}>
-                <div className="group relative bg-card rounded-xl border border-border/70 overflow-hidden hover:border-primary/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-primary/10">
+                <div className={CARD_SHELL}>
                   <div
-                    className={`w-full ${STYLE_GRADIENTS[comic.style] || STYLE_GRADIENTS.anime} relative`}
+                    className={`relative w-full overflow-hidden border-b-[3px] border-[#12100c] ${COVER_GROUND}`}
                     style={{ aspectRatio: previewAspectRatios[`comic-${comic.id}`] ?? "16 / 9" }}
                   >
-                    <div className="absolute inset-0 bg-foreground/15 group-hover:bg-transparent transition-colors" />
-                    <div className={`absolute top-4 left-4 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${comic.published ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>
+                    <div
+                      className={`${STAMP_BASE} ${
+                        comic.published ? "bg-[#12100c] text-[#f2ede1]" : "bg-[#f2b32e] text-[#12100c]"
+                      }`}
+                    >
                       {comic.published ? <CheckCircle2 className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
                       {comic.published ? 'Published' : 'Unpublished'}
                     </div>
-                    <div className="absolute top-4 right-4 bg-background/85 backdrop-blur-md px-2 py-1 rounded-md text-xs font-medium border border-border/70">
-                      {comic.style}
-                    </div>
+                    <div className={STYLE_STAMP}>{comic.style}</div>
                     {/* Show first panel image if available */}
                     {comic.panels?.[0]?.imageUrl && (
                       <img
                         src={comic.panels[0].imageUrl}
                         alt={comic.title}
-                        className="w-full h-full object-contain bg-muted/40"
+                        className="h-full w-full object-contain"
                         onLoad={handlePreviewLoad(`comic-${comic.id}`)}
                       />
                     )}
                   </div>
 
                   <div className="p-5">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-xl font-bold font-display group-hover:text-primary transition-colors">
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <h3 className="font-display text-[22px] uppercase leading-none text-[#12100c] transition-colors group-hover:text-[#d8402f]">
                         {comic.title}
                       </h3>
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-shrink-0 items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          className="h-8 w-8 text-[#6d675a] hover:text-[#d8402f]"
                           onClick={(e) => handleRegenerateProject(e, comic.id)}
                         >
-                          <Wand2 className="w-4 h-4" />
+                          <Wand2 className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-8 w-8 text-[#6d675a] hover:text-[#d8402f]"
                           onClick={(e) => handleDeleteComic(e, comic.id)}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
 
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{comic.idea}</p>
+                    <p className="mb-4 line-clamp-2 text-[14px] leading-relaxed text-[#4a4535]">{comic.idea}</p>
 
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 border-t-[2px] border-[#ddd6c4] pt-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[#4a4535]">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
+                        <Clock className="h-3 w-3" />
                         {formatDate(comic.createdAt)}
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Layout className="w-3.5 h-3.5" />
+                        <Layout className="h-3 w-3" />
                         {comic.panels?.length || 0} Panels
                       </div>
                     </div>
@@ -386,22 +393,24 @@ export default function Dashboard() {
 
             {/* Create New Card Placeholder */}
             <Link href="/editor/new">
-              <div className="h-full min-h-[300px] border-2 border-dashed border-border/70 rounded-xl flex flex-col items-center justify-center text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer gap-4">
-                <div className="w-16 h-16 rounded-full bg-background border border-border/70 flex items-center justify-center">
-                  <Plus className="w-8 h-8" />
+              <div className="flex h-full min-h-[300px] cursor-pointer flex-col items-center justify-center gap-4 border-4 border-dashed border-[#12100c] text-[#4a4535] transition-colors hover:bg-[#ddd6c4] hover:text-[#12100c]">
+                <div className="flex h-16 w-16 items-center justify-center border-[3px] border-[#12100c] bg-[#f8f5ec]">
+                  <Plus className="h-8 w-8" />
                 </div>
-                <span className="font-medium">Create New Project</span>
+                <span className="font-display text-[18px] uppercase tracking-wide">Create New Project</span>
               </div>
             </Link>
           </div>
         )}
 
         {!isLoading && comics.length === 0 && drafts.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground mb-4">You haven't created any comics yet.</p>
+          <div className="mt-10 border-[3px] border-dashed border-[#6d675a] py-20 text-center">
+            <p className="mb-6 font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
+              You haven't created any comics yet.
+            </p>
             <Link href="/editor/new">
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="w-4 h-4 mr-2" /> Create Your First Comic
+              <Button>
+                <Plus className="mr-1 h-4 w-4" /> Create Your First Comic
               </Button>
             </Link>
           </div>

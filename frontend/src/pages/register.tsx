@@ -75,54 +75,56 @@ export default function Register() {
   };
 
   return (
-    <PageLayout className="bg-background text-foreground font-sans">
-      <main className="container max-w-md mx-auto px-4 py-20">
-        <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="text-center space-y-2 mb-8">
-            <h1 className="text-3xl font-display font-bold tracking-tight">Create Account</h1>
-            <p className="text-muted-foreground text-sm">Sign up to start creating AI comics</p>
+    <PageLayout>
+      <main className="container mx-auto max-w-md px-4 py-20">
+        <div className="border-[3px] border-[#12100c] bg-[#f8f5ec] hard-shadow">
+          <div className="border-b-4 border-[#12100c] px-8 py-6">
+            <h1 className="font-display text-[34px] uppercase leading-none text-[#12100c]">
+              Create Account
+            </h1>
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
+              Sign up to start creating AI comics
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 p-8">
             {error && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg p-3">
+              <div className="border-[3px] border-[#12100c] bg-[#d8402f] p-3 font-mono text-[11px] uppercase tracking-[0.1em] text-[#f2ede1]">
                 {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-bold text-muted-foreground">Username</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Choose a username"
-                className="h-12 bg-muted/50 border-border/80 focus:border-primary/50"
+                className="h-12"
                 required
                 minLength={3}
                 maxLength={30}
               />
-              <p className="text-[10px] text-muted-foreground">3-30 characters, letters, numbers, and underscores only</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">3-30 characters, letters, numbers, and underscores only</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-bold text-muted-foreground">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="h-12 bg-muted/50 border-border/80 focus:border-primary/50"
+                className="h-12"
                 required
               />
-              <p className="text-[10px] text-muted-foreground">Used for password recovery</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">Used for password recovery</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-bold text-muted-foreground">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -130,7 +132,7 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Create a password"
-                  className="h-12 bg-muted/50 border-border/80 focus:border-primary/50 pr-12"
+                  className="h-12 pr-12"
                   required
                   minLength={8}
                   maxLength={128}
@@ -138,16 +140,16 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6d675a] transition-colors hover:text-[#12100c]"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground">Minimum 8 characters</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">Minimum 8 characters</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-sm font-bold text-muted-foreground">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -155,7 +157,7 @@ export default function Register() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm your password"
-                  className="h-12 bg-muted/50 border-border/80 focus:border-primary/50 pr-12"
+                  className="h-12 pr-12"
                   required
                   minLength={8}
                   maxLength={128}
@@ -163,7 +165,7 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6d675a] transition-colors hover:text-[#12100c]"
                 >
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -173,7 +175,8 @@ export default function Register() {
             <Button
               type="submit"
               disabled={isLoading || !username || !email || !password || !confirmPassword}
-              className="w-full h-12 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+              size="lg"
+              className="w-full"
             >
               {isLoading ? (
                 <><Loader2 className="mr-2 w-5 h-5 animate-spin" /> Creating account...</>
@@ -183,9 +186,9 @@ export default function Register() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          <p className="border-t-[3px] border-[#12100c] px-8 py-5 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[#6d675a]">
             Already have an account?{" "}
-            <Link href={loginHref} className="text-primary hover:underline font-medium">
+            <Link href={loginHref} className="text-[#d8402f] hover:underline">
               Log in
             </Link>
           </p>
