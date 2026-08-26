@@ -181,24 +181,25 @@ const SURVEY_DATE = "June 2026";
 
 const SURVEY_FEATURES = [
   "End-to-end 6-panel",
+  "Story quality control",
   "Character consistency",
   "Auto speech bubbles",
   "Text-free images",
 ] as const;
 
 const SURVEYED_TOOLS: { name: string; support: Support[] }[] = [
-  { name: "Pixton", support: ["no", "partial", "yes", "partial"] },
-  { name: "Canva", support: ["no", "no", "yes", "partial"] },
-  { name: "Midjourney", support: ["no", "no", "no", "no"] },
-  { name: "Stable Diffusion WebUI", support: ["no", "partial", "no", "yes"] },
-  { name: "NovelAI Diffusion", support: ["no", "partial", "no", "yes"] },
-  { name: "Storyboarder", support: ["no", "no", "no", "yes"] },
-  { name: "GoEnhance AI", support: ["no", "partial", "no", "yes"] },
+  { name: "Pixton", support: ["no", "no", "partial", "yes", "partial"] },
+  { name: "Canva", support: ["no", "no", "no", "yes", "partial"] },
+  { name: "Midjourney", support: ["no", "no", "no", "no", "no"] },
+  { name: "Stable Diffusion WebUI", support: ["no", "no", "partial", "no", "yes"] },
+  { name: "NovelAI Diffusion", support: ["no", "no", "partial", "no", "yes"] },
+  { name: "Storyboarder", support: ["no", "no", "no", "no", "yes"] },
+  { name: "GoEnhance AI", support: ["no", "no", "partial", "no", "yes"] },
 ];
 
-const COMICMIND_SUPPORT: Support[] = ["yes", "yes", "yes", "yes"];
+const COMICMIND_SUPPORT: Support[] = ["yes", "yes", "yes", "yes", "yes"];
 
-const SUPPORT_MARK: Record<Support, string> = { yes: "✓", partial: "~", no: "✗" };
+const SUPPORT_MARK: Record<Support, string> = { yes: "✓", partial: "±", no: "✗" };
 const SUPPORT_LABEL: Record<Support, string> = {
   yes: "Yes",
   partial: "Partial",
@@ -310,14 +311,15 @@ function ComparisonBand() {
           </h2>
           <p className="max-w-2xl text-[16px] leading-relaxed text-[#4a4535]">
             We reviewed the comic-creation services creators actually use. Several handle
-            part of the job well. Not one takes an idea all the way to a finished,
-            character-consistent six-panel comic without manual assembly.
+            part of the job well — Pixton and Canva lay out a page, Midjourney and NovelAI
+            draw beautifully. But not one structures a story, and not one takes an idea all
+            the way to a finished six-panel comic without manual assembly.
           </p>
         </div>
 
         {/* Wide table scrolls inside its own frame rather than the page. */}
         <div className="overflow-x-auto border-[3px] border-[#12100c]">
-          <table className="w-full min-w-[640px] border-collapse text-left">
+          <table className="w-full min-w-[760px] border-collapse text-left">
             <thead>
               <tr className="bg-[#12100c] text-[#f2ede1]">
                 <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.12em]">
@@ -357,30 +359,35 @@ function ComparisonBand() {
           </table>
         </div>
 
-        <p className="font-mono text-[10px] uppercase leading-relaxed tracking-[0.1em] text-[#6d675a]">
-          Source: ComicMind dissertation, Table 1 — feature survey of comic creation
-          services, {SURVEY_DATE}. &ldquo;Partial&rdquo; means the tool offers some
-          control but no automated guarantee across panels.
+        <p className="max-w-3xl font-mono text-[10px] uppercase leading-relaxed tracking-[0.1em] text-[#6d675a]">
+          ✓ full &nbsp;·&nbsp; ± partial &nbsp;·&nbsp; ✗ none &nbsp;— Source: ComicMind
+          dissertation, Table 1, feature survey of comic creation services, {SURVEY_DATE}.
+          &ldquo;Partial&rdquo; means the tool offers some control but no automated
+          guarantee across panels.
         </p>
       </div>
     </section>
   );
 }
 
+/** Stamped squares rather than bare glyphs — scannable down a column. */
 function SupportCell({ value }: { value: Support }) {
   const tone =
     value === "yes"
-      ? "text-[#12100c]"
+      ? "border-[#12100c] bg-[#12100c] text-[#f2ede1]"
       : value === "partial"
-        ? "text-[#6d675a]"
-        : "text-[#d8402f]";
+        ? "border-[#6d675a] bg-transparent text-[#6d675a]"
+        : "border-[#d8402f] bg-transparent text-[#d8402f]";
 
   return (
     <td className="px-4 py-3">
-      <span className={`font-display text-[18px] leading-none ${tone}`} aria-hidden>
-        {SUPPORT_MARK[value]}
+      <span
+        className={`inline-flex h-6 w-6 items-center justify-center border-2 text-[13px] font-bold leading-none ${tone}`}
+        title={SUPPORT_LABEL[value]}
+      >
+        <span aria-hidden>{SUPPORT_MARK[value]}</span>
+        <span className="sr-only">{SUPPORT_LABEL[value]}</span>
       </span>
-      <span className="sr-only">{SUPPORT_LABEL[value]}</span>
     </td>
   );
 }
