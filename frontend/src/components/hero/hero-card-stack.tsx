@@ -6,7 +6,7 @@ import { usePublicComics, type PublicComic } from "@/hooks/use-panel-images";
 const CARD_ROTATIONS = ["-5deg", "4deg", "3deg", "-6deg"];
 
 export function HeroCardStack() {
-  const backgroundComics = usePublicComics(4);
+  const backgroundComics = usePublicComics();
 
   return (
     <div className="relative w-full">

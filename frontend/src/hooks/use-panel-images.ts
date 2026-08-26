@@ -29,31 +29,54 @@ function isRealPanel(url?: string): url is string {
   return Boolean(url) && url !== PLACEHOLDER_PANEL;
 }
 
+/**
+ * How many published comics the home page reads.
+ *
+ * Wide enough that a style with only one comic does not drop out of the
+ * window as newer work is published — at 12 a single burst of new comics
+ * could empty a style card that was previously filled. The response carries
+ * one panel per comic, so this stays small.
+ */
+const PUBLIC_WINDOW = 50;
+
+/**
+ * Shared across every consumer on the page: five hooks each firing their own
+ * request for the same list is wasteful, so the in-flight promise is reused.
+ */
+let publicComicsRequest: Promise<PublicComic[]> | null = null;
+
+function fetchPublicComics(): Promise<PublicComic[]> {
+  if (!publicComicsRequest) {
+    publicComicsRequest = fetch(`/api/comics/public?limit=${PUBLIC_WINDOW}`)
+      .then((res) => (res.ok ? res.json() : { comics: [] }))
+      .then((data) => (Array.isArray(data?.comics) ? (data.comics as PublicComic[]) : []))
+      .catch(() => {
+        // Let the next mount retry rather than caching a failure.
+        publicComicsRequest = null;
+        return [];
+      });
+  }
+  return publicComicsRequest;
+}
+
+/** Clears the shared request. Tests only — nothing in the app should call it. */
+export function __resetPublicComicsCache() {
+  publicComicsRequest = null;
+}
+
 /** Published comics, newest first — exactly what the endpoint returns. */
-export function usePublicComics(limit = 12): PublicComic[] {
+export function usePublicComics(): PublicComic[] {
   const [comics, setComics] = useState<PublicComic[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch(`/api/comics/public?limit=${limit}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && Array.isArray(data.comics)) {
-          setComics(data.comics as PublicComic[]);
-        }
-      } catch {
-        // Callers fall back to their placeholder treatment.
-      }
-    }
-
-    load();
+    fetchPublicComics().then((list) => {
+      if (!cancelled) setComics(list);
+    });
     return () => {
       cancelled = true;
     };
-  }, [limit]);
+  }, []);
 
   return comics;
 }
@@ -69,7 +92,7 @@ export function usePublicComics(limit = 12): PublicComic[] {
  * real panels to make the point.
  */
 export function useComicRun(count: number): { title: string; panels: string[] } {
-  const comics = usePublicComics(12);
+  const comics = usePublicComics();
   const [run, setRun] = useState<{ title: string; panels: string[] }>({
     title: "",
     panels: [],
@@ -127,7 +150,7 @@ export function useComicRun(count: number): { title: string; panels: string[] } 
  * only a handful of published comics.
  */
 export function usePanelImages(count: number): string[] {
-  const comics = usePublicComics(12);
+  const comics = usePublicComics();
 
   const covers = comics
     .map((comic) => comic.panels[0]?.imageUrl)
@@ -148,7 +171,7 @@ export function usePanelImages(count: number): string[] {
  * otherwise it keeps the hatch rather than showing something misleading.
  */
 export function useStyleSamples(): Record<string, string> {
-  const comics = usePublicComics(12);
+  const comics = usePublicComics();
 
   const samples: Record<string, string> = {};
   for (const comic of comics) {

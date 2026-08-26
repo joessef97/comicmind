@@ -535,7 +535,7 @@ function StylesBand() {
 /* -------------------------------------------------------------------------- */
 
 function TopRatedBand() {
-  const comics = usePublicComics(12);
+  const comics = usePublicComics();
 
   // The endpoint sorts by createdAt, so rank here to earn the heading.
   const ranked = [...comics]
