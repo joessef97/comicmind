@@ -4,45 +4,59 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Inter', sans-serif;
-  --font-display: 'Outfit', sans-serif;
-  --font-comic: 'Bangers', cursive;
+  --font-sans: 'Archivo', system-ui, sans-serif;
+  --font-display: 'Anton', 'Archivo', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
+  /* Newsprint palette — raw values, for direct use (bg-paper, border-ink, ...) */
+  --color-paper: #f2ede1;
+  --color-paper-card: #f8f5ec;
+  --color-ink: #12100c;
+  --color-ink-panel: #1b1811;
+  --color-riso-red: #d8402f;
+  --color-riso-blue: #2f4fd8;
+  --color-riso-yellow: #f2b32e;
+  --color-ink-muted: #4a4535;
+  --color-ink-faint: #6d675a;
+  --color-rule: #ddd6c4;
+
+  /* Semantic tokens — remapped onto Newsprint so untouched call sites stay on-brand */
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-  
+
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
+
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
-  
+
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
-  
+
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
+
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-  
+
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-  
+
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+
+  /* Newsprint has no rounded corners. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 
   --animate-float: float 6s ease-in-out infinite;
-  
+
   @keyframes float {
     0% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
@@ -50,74 +64,77 @@
   }
 }
 
+/* Paper chrome — the default. */
 :root {
-  --background: 220 33% 98%;
-  --foreground: 224 25% 16%;
+  --background: 42 40% 92%;   /* paper      #f2ede1 */
+  --foreground: 40 20% 6%;    /* ink        #12100c */
 
-  --card: 0 0% 100%;
-  --card-foreground: 224 25% 16%;
+  --card: 45 46% 95%;         /* paper-card #f8f5ec */
+  --card-foreground: 40 20% 6%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 224 25% 16%;
+  --popover: 45 46% 95%;
+  --popover-foreground: 40 20% 6%;
 
-  --primary: 250 80% 57%;
-  --primary-foreground: 210 20% 98%;
+  --primary: 6 68% 52%;       /* red        #d8402f */
+  --primary-foreground: 42 40% 92%;
 
-  --secondary: 190 75% 46%;
-  --secondary-foreground: 220 33% 98%;
+  --secondary: 229 68% 52%;   /* blue       #2f4fd8 */
+  --secondary-foreground: 42 40% 92%;
 
-  --muted: 220 30% 94%;
-  --muted-foreground: 220 12% 38%;
+  --muted: 43 27% 82%;        /* rule       #ddd6c4 */
+  --muted-foreground: 41 10% 39%; /* faint  #6d675a */
 
-  --accent: 334 78% 56%;
-  --accent-foreground: 210 20% 98%;
+  --accent: 41 88% 56%;       /* yellow     #f2b32e */
+  --accent-foreground: 40 20% 6%;
 
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 20% 98%;
+  --destructive: 6 68% 52%;
+  --destructive-foreground: 42 40% 92%;
 
-  --border: 220 18% 86%;
-  --input: 220 18% 86%;
-  --ring: 250 80% 57%;
+  --border: 40 20% 6%;
+  --input: 40 20% 6%;
+  --ring: 40 20% 6%;
 
-  --glass-bg: 255 255 255;
-  --glass-border: 17 24 39;
-  --radius: 0.5rem;
+  --radius: 0px;
+
+  /* Replit-era variables still referenced by button/badge variants. */
+  --button-outline: hsl(40 20% 6%);
+  --badge-outline: hsl(40 20% 6%);
 }
 
+/* Ink chrome — the same palette inverted, used by the theme toggle. */
 .dark {
-  --background: 224 25% 10%;
-  --foreground: 210 20% 98%;
+  --background: 40 20% 6%;
+  --foreground: 42 40% 92%;
 
-  --card: 224 25% 14%;
-  --card-foreground: 210 20% 98%;
+  --card: 42 23% 9%;          /* ink-panel  #1b1811 */
+  --card-foreground: 42 40% 92%;
 
-  --popover: 224 25% 14%;
-  --popover-foreground: 210 20% 98%;
+  --popover: 42 23% 9%;
+  --popover-foreground: 42 40% 92%;
 
-  --primary: 262 83% 68%;
-  --primary-foreground: 210 20% 98%;
+  --primary: 6 68% 52%;
+  --primary-foreground: 42 40% 92%;
 
-  --secondary: 190 90% 60%;
-  --secondary-foreground: 224 25% 10%;
+  --secondary: 229 68% 52%;
+  --secondary-foreground: 42 40% 92%;
 
-  --muted: 224 20% 20%;
-  --muted-foreground: 215 15% 70%;
+  --muted: 42 23% 14%;
+  --muted-foreground: 41 14% 62%;
 
-  --accent: 330 80% 60%;
-  --accent-foreground: 210 20% 98%;
+  --accent: 41 88% 56%;
+  --accent-foreground: 40 20% 6%;
 
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 20% 98%;
+  --destructive: 6 68% 52%;
+  --destructive-foreground: 42 40% 92%;
 
-  --border: 224 20% 20%;
-  --input: 224 20% 20%;
-  --ring: 262 83% 68%;
+  --border: 42 40% 92%;
+  --input: 42 40% 92%;
+  --ring: 42 40% 92%;
 
-  --glass-bg: 30 32 40;
-  --glass-border: 255 255 255;
+  --button-outline: hsl(42 40% 92%);
+  --badge-outline: hsl(42 40% 92%);
 }
 
-/* Force dark mode styles since we are going for a specific aesthetic */
 @layer base {
   * {
     @apply border-border;
@@ -126,18 +143,68 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 0.98;
+    letter-spacing: -0.01em;
   }
 }
 
-.comic-font {
-  font-family: var(--font-comic);
+/* ---------------------------------------------------------------------------
+   Newsprint primitives
+   --------------------------------------------------------------------------- */
+
+/* Hard offset shadows. Never blurred — this is ink on paper, not glass. */
+.hard-shadow    { box-shadow: 6px 6px 0 #12100c; }
+.hard-shadow-sm { box-shadow: 4px 4px 0 #12100c; }
+.hard-shadow-lg { box-shadow: 7px 7px 0 #12100c; }
+.hard-shadow-paper    { box-shadow: 6px 6px 0 #f2ede1; }
+.hard-shadow-red      { box-shadow: 6px 6px 0 #d8402f; }
+.hard-shadow-blue     { box-shadow: 6px 6px 0 #2f4fd8; }
+.hard-shadow-yellow   { box-shadow: 6px 6px 0 #f2b32e; }
+
+/* Offset halftone dots. Hero and closing CTA band only. */
+.halftone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(#12100c 1.2px, transparent 1.2px);
+  background-size: 9px 9px;
+  opacity: 0.18;
+}
+.halftone-paper::before {
+  background-image: radial-gradient(#f2ede1 1.2px, transparent 1.2px);
+  opacity: 0.22;
 }
 
-.glass-panel {
-  background: rgba(var(--glass-bg), 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(var(--glass-border), 0.12);
+/* Display numerals: colour fill with an ink outline drawn behind it. */
+.numeral-outline {
+  font-family: var(--font-display);
+  -webkit-text-stroke: 1.5px #12100c;
+  paint-order: stroke fill;
+}
+.numeral-outline-paper { -webkit-text-stroke: 3px #f2ede1; }
+
+/* Diagonal hatch standing in for art that is loading or absent. */
+.art-placeholder {
+  background-image: repeating-linear-gradient(135deg, #e2ddcd 0 9px, #d7d1bf 9px 18px);
+}
+.art-placeholder-ink {
+  background-image: repeating-linear-gradient(135deg, #302b20 0 9px, #262218 9px 18px);
+}
+
+/* Mono metadata / label voice. */
+.label-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.comic-font {
+  font-family: var(--font-display);
 }
 
 .comic-grid {
@@ -145,4 +212,15 @@
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Zero radius, everywhere, no exceptions.
+   Unlayered, so it outranks every Tailwind `rounded-*` utility without
+   needing !important or edits at 400+ call sites.
+   --------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  border-radius: 0;
 }

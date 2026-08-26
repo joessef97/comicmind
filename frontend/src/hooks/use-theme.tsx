@@ -22,7 +22,7 @@ function getInitialTheme(): Theme {
     return storedTheme;
   }
 
-  return "dark";
+  return "light";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
