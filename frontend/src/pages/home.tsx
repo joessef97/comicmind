@@ -54,6 +54,7 @@ export default function Home() {
       <HeroBand createLink={createLink} galleryLink={galleryLink} />
       <StepsBand />
       <ConsistencyBand />
+      <ComparisonBand />
       <EditorDemoBand />
       <StylesBand />
       <TopRatedBand />
@@ -164,31 +165,45 @@ function StepsBand() {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The comic generators surveyed for the project, and when. Naming a product
- * and saying it lacks a feature is a factual claim, so the caption states the
- * scope and the date rather than asserting something open-ended about every
- * tool that exists — a survey is true of what it tested, when it tested it.
+ * Feature survey of comic-creation services, transcribed verbatim from Table 1
+ * of the ComicMind dissertation (Youssef Ahmed, supervised by Dr. Randa
+ * Elanwar, June 2026).
  *
- * Add the tools that were actually checked, e.g. ["Tool A", "Tool B"].
+ * Values are the study's own, including the "partial" gradings — several of
+ * these tools do offer some character control, and overstating that as a flat
+ * absence would misrepresent both them and the research. What the survey found
+ * unanimously is the end-to-end row: not one of the seven produces a finished
+ * multi-panel comic without manual assembly.
  */
-const SURVEYED_TOOLS: string[] = [];
+type Support = "yes" | "partial" | "no";
 
-/** Month and year the survey was run, shown alongside the names. */
-const SURVEY_DATE = "";
+const SURVEY_DATE = "June 2026";
 
-/** Screenshots of surveyed output, when we have permission to show them. */
-const SURVEYED_TOOL_PANELS: string[] = [];
+const SURVEY_FEATURES = [
+  "End-to-end 6-panel",
+  "Character consistency",
+  "Auto speech bubbles",
+  "Text-free images",
+] as const;
 
-function surveyCaption(): string | undefined {
-  if (!SURVEYED_TOOLS.length) return undefined;
+const SURVEYED_TOOLS: { name: string; support: Support[] }[] = [
+  { name: "Pixton", support: ["no", "partial", "yes", "partial"] },
+  { name: "Canva", support: ["no", "no", "yes", "partial"] },
+  { name: "Midjourney", support: ["no", "no", "no", "no"] },
+  { name: "Stable Diffusion WebUI", support: ["no", "partial", "no", "yes"] },
+  { name: "NovelAI Diffusion", support: ["no", "partial", "no", "yes"] },
+  { name: "Storyboarder", support: ["no", "no", "no", "yes"] },
+  { name: "GoEnhance AI", support: ["no", "partial", "no", "yes"] },
+];
 
-  const names =
-    SURVEYED_TOOLS.length === 1
-      ? SURVEYED_TOOLS[0]
-      : `${SURVEYED_TOOLS.slice(0, -1).join(", ")} and ${SURVEYED_TOOLS.at(-1)}`;
+const COMICMIND_SUPPORT: Support[] = ["yes", "yes", "yes", "yes"];
 
-  return `Surveyed${SURVEY_DATE ? ` ${SURVEY_DATE}` : ""}: ${names} — none held one character across panels`;
-}
+const SUPPORT_MARK: Record<Support, string> = { yes: "✓", partial: "~", no: "✗" };
+const SUPPORT_LABEL: Record<Support, string> = {
+  yes: "Yes",
+  partial: "Partial",
+  no: "No",
+};
 
 function ConsistencyBand() {
   // Our side is proof, not illustration: consecutive panels from one published
@@ -210,20 +225,16 @@ function ConsistencyBand() {
           </p>
         </div>
 
-        <div className="space-y-8">
-          <ThumbnailRow
-            label="Other tools"
-            variant="dashed"
-            images={SURVEYED_TOOL_PANELS}
-            caption={surveyCaption()}
-          />
-          <ThumbnailRow
-            label="ComicMind"
-            variant="solid"
-            images={run.panels}
-            caption={run.title ? `From "${run.title}" — panels 1–4, one unbroken run` : undefined}
-          />
-        </div>
+        <ThumbnailRow
+          label="ComicMind"
+          variant="solid"
+          images={run.panels}
+          caption={
+            run.title
+              ? `From "${run.title}" — panels 1–4, one unbroken run, same cast`
+              : undefined
+          }
+        />
       </div>
     </section>
   );
@@ -281,6 +292,96 @@ function ThumbnailRow({
         <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">{caption}</p>
       )}
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* 3b. Survey comparison                                                      */
+/* -------------------------------------------------------------------------- */
+
+function ComparisonBand() {
+  return (
+    <section className="border-b-4 border-[#12100c] bg-[#f2ede1] px-6 py-16 lg:px-12 lg:py-20">
+      <div className="container mx-auto space-y-8">
+        <div className="space-y-3">
+          <span className="label-mono text-[#2f4fd8]">The survey</span>
+          <h2 className="max-w-3xl font-display text-[38px] uppercase leading-[0.95] text-[#12100c] sm:text-[52px]">
+            Seven tools. None finish the comic.
+          </h2>
+          <p className="max-w-2xl text-[16px] leading-relaxed text-[#4a4535]">
+            We reviewed the comic-creation services creators actually use. Several handle
+            part of the job well. Not one takes an idea all the way to a finished,
+            character-consistent six-panel comic without manual assembly.
+          </p>
+        </div>
+
+        {/* Wide table scrolls inside its own frame rather than the page. */}
+        <div className="overflow-x-auto border-[3px] border-[#12100c]">
+          <table className="w-full min-w-[640px] border-collapse text-left">
+            <thead>
+              <tr className="bg-[#12100c] text-[#f2ede1]">
+                <th className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.12em]">
+                  Tool
+                </th>
+                {SURVEY_FEATURES.map((feature) => (
+                  <th
+                    key={feature}
+                    className="px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-[0.12em]"
+                  >
+                    {feature}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {SURVEYED_TOOLS.map((tool) => (
+                <tr key={tool.name} className="border-t-[2px] border-[#ddd6c4] bg-[#f8f5ec]">
+                  <th className="px-4 py-3 text-[14px] font-semibold text-[#12100c]">
+                    {tool.name}
+                  </th>
+                  {tool.support.map((value, i) => (
+                    <SupportCell key={SURVEY_FEATURES[i]} value={value} />
+                  ))}
+                </tr>
+              ))}
+
+              <tr className="border-t-[3px] border-[#12100c] bg-[#f2b32e]">
+                <th className="px-4 py-3 font-display text-[20px] uppercase leading-none text-[#12100c]">
+                  ComicMind
+                </th>
+                {COMICMIND_SUPPORT.map((value, i) => (
+                  <SupportCell key={SURVEY_FEATURES[i]} value={value} />
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="font-mono text-[10px] uppercase leading-relaxed tracking-[0.1em] text-[#6d675a]">
+          Source: ComicMind dissertation, Table 1 — feature survey of comic creation
+          services, {SURVEY_DATE}. &ldquo;Partial&rdquo; means the tool offers some
+          control but no automated guarantee across panels.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function SupportCell({ value }: { value: Support }) {
+  const tone =
+    value === "yes"
+      ? "text-[#12100c]"
+      : value === "partial"
+        ? "text-[#6d675a]"
+        : "text-[#d8402f]";
+
+  return (
+    <td className="px-4 py-3">
+      <span className={`font-display text-[18px] leading-none ${tone}`} aria-hidden>
+        {SUPPORT_MARK[value]}
+      </span>
+      <span className="sr-only">{SUPPORT_LABEL[value]}</span>
+    </td>
   );
 }
 
