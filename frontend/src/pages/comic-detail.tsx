@@ -423,7 +423,7 @@ export default function ComicDetailPage() {
       </div>
 
       {/* Reader on an ink band */}
-      <section className="border-b-4 border-[#12100c] bg-[#1b1811] px-4 py-12">
+      <section className="dark border-b-4 border-[#12100c] bg-[#1b1811] px-4 py-12">
         <div className="mx-auto max-w-[1200px] overflow-visible border-[4px] border-[#f2ede1] bg-[#12100c] p-4 md:p-6">
           <ComicBookReader
             comicId={comic.id}
@@ -655,7 +655,7 @@ export default function ComicDetailPage() {
             </div>
           )}
 
-          <div className="border-[3px] border-[#12100c] bg-[#12100c] p-5">
+          <div className="dark border-[3px] border-[#12100c] bg-[#12100c] p-5">
             <h3 className="font-display text-[24px] uppercase leading-none text-[#f2ede1]">
               Make your own
             </h3>

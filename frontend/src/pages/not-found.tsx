@@ -5,7 +5,7 @@ import { PageLayout } from "@/components/layout/page-layout";
 export default function NotFound() {
   return (
     <PageLayout>
-      <main className="halftone relative flex flex-1 items-center justify-center overflow-hidden bg-[#12100c] px-4 py-24">
+      <main className="dark halftone relative flex flex-1 items-center justify-center overflow-hidden bg-[#12100c] px-4 py-24">
         <div className="relative z-10 flex flex-col items-center gap-6 text-center">
           <span
             className="numeral-outline numeral-outline-paper text-[104px] leading-none text-[#d8402f]"

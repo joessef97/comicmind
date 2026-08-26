@@ -11,7 +11,9 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, className, contentClassName }: PageLayoutProps) {
   return (
-    <div className={cn("min-h-screen flex flex-col bg-background", className)}>
+    // `light` pins the paper tokens; pages with ink chrome pass `dark`, which is
+    // declared later in index.css and therefore wins.
+    <div className={cn("light min-h-screen flex flex-col bg-background", className)}>
       <Navbar />
       <div className={cn("flex-1", contentClassName)}>{children}</div>
       <Footer />

@@ -23,8 +23,10 @@ export function Navbar() {
 
   const inkChrome = Boolean(user);
 
+  // `dark` flips the semantic tokens for everything inside the ink chrome, so
+  // borders, outlines and offset shadows stay visible against it.
   const shell = inkChrome
-    ? "h-[74px] bg-[#12100c] text-[#f2ede1] border-b-4 border-[#f2ede1]"
+    ? "dark h-[74px] bg-[#12100c] text-[#f2ede1] border-b-4 border-[#f2ede1]"
     : "h-[82px] bg-[#f2ede1] text-[#12100c] border-b-4 border-[#12100c]";
   const activeUnderline = inkChrome ? "border-[#f2b32e]" : "border-[#d8402f]";
   const linkIdle = inkChrome

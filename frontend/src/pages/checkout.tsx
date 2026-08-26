@@ -189,7 +189,7 @@ export default function Checkout() {
               </div>
             </section>
 
-            <aside className="h-fit border-[3px] border-[#12100c] bg-[#12100c] p-6 md:p-8">
+            <aside className="dark h-fit border-[3px] border-[#12100c] bg-[#12100c] p-6 md:p-8">
               <div className="mb-6 border-b-[3px] border-[#f2ede1] pb-6">
                 <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#a39b8b]">
                   Order Summary

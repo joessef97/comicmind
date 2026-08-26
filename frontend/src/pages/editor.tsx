@@ -693,7 +693,7 @@ export default function Editor() {
   };
 
   return (
-    <PageLayout className="bg-[#12100c] text-[#f2ede1]">
+    <PageLayout className="dark bg-[#12100c] text-[#f2ede1]">
 
       {isLoadingDraft ? (
         <main className="container mx-auto max-w-2xl px-4 py-16">

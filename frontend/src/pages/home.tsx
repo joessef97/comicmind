@@ -5,6 +5,7 @@ import { HeroCardStack } from "@/components/hero/hero-card-stack";
 import { ArrowRight, Star } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { usePanelImages } from "@/hooks/use-panel-images";
 import { getDisplayImageUrl } from "@/lib/utils";
 
 const STEPS = [
@@ -123,7 +124,7 @@ function HeroBand({ createLink, galleryLink }: { createLink: string; galleryLink
         </div>
       </div>
 
-      <div className="halftone relative overflow-hidden border-t-4 border-[#12100c] bg-[#1b1811] px-6 py-14 lg:border-l-4 lg:border-t-0 lg:px-12 lg:py-20">
+      <div className="dark halftone relative overflow-hidden border-t-4 border-[#12100c] bg-[#1b1811] px-6 py-14 lg:border-l-4 lg:border-t-0 lg:px-12 lg:py-20">
         <div className="relative z-10 mx-auto w-full max-w-[560px]">
           <HeroCardStack />
         </div>
@@ -169,6 +170,13 @@ function StepsBand() {
 /* -------------------------------------------------------------------------- */
 
 function ConsistencyBand() {
+  const images = usePanelImages(8);
+  // A schematic, not a screenshot of a competitor: consecutive panels from one
+  // run read as a consistent cast, a scattered pick from different comics does
+  // not. The two rows draw from disjoint slices so the contrast is real.
+  const consistent = images.slice(0, 4);
+  const shuffled = [images[7], images[5], images[6], images[4]].filter(Boolean) as string[];
+
   return (
     <section className="border-b-4 border-[#12100c] bg-[#f2ede1] px-6 py-16 lg:px-12 lg:py-20">
       <div className="container mx-auto grid gap-12 lg:grid-cols-2 lg:items-center">
@@ -185,15 +193,25 @@ function ConsistencyBand() {
         </div>
 
         <div className="space-y-8">
-          <ThumbnailRow label="Other tools" variant="dashed" />
-          <ThumbnailRow label="ComicMind" variant="solid" />
+          {/* "Other tools" shuffles the cast so the faces don't match; ComicMind
+              holds one run in order. */}
+          <ThumbnailRow label="Other tools" variant="dashed" images={shuffled} />
+          <ThumbnailRow label="ComicMind" variant="solid" images={consistent} />
         </div>
       </div>
     </section>
   );
 }
 
-function ThumbnailRow({ label, variant }: { label: string; variant: "dashed" | "solid" }) {
+function ThumbnailRow({
+  label,
+  variant,
+  images,
+}: {
+  label: string;
+  variant: "dashed" | "solid";
+  images: string[];
+}) {
   const frame =
     variant === "dashed"
       ? "border-[3px] border-dashed border-[#6d675a]"
@@ -206,7 +224,18 @@ function ThumbnailRow({ label, variant }: { label: string; variant: "dashed" | "
       </span>
       <div className="grid grid-cols-4 gap-3">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className={`art-placeholder aspect-square ${frame}`} />
+          <div key={i} className={`art-placeholder aspect-square overflow-hidden ${frame}`}>
+            {images[i] && (
+              <img
+                src={images[i]}
+                alt=""
+                aria-hidden
+                className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+          </div>
         ))}
       </div>
     </div>
@@ -218,8 +247,10 @@ function ThumbnailRow({ label, variant }: { label: string; variant: "dashed" | "
 /* -------------------------------------------------------------------------- */
 
 function EditorDemoBand() {
+  const images = usePanelImages(7);
+
   return (
-    <section className="border-b-4 border-[#12100c] bg-[#1b1811] px-6 py-16 lg:px-12 lg:py-20">
+    <section className="dark border-b-4 border-[#12100c] bg-[#1b1811] px-6 py-16 lg:px-12 lg:py-20">
       <div className="container mx-auto space-y-10">
         <div className="space-y-3">
           <span className="label-mono text-[#f2b32e]">The studio</span>
@@ -236,11 +267,23 @@ function EditorDemoBand() {
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <div
                   key={n}
-                  className={`art-placeholder-ink flex aspect-square items-center justify-center border-[3px] ${
+                  className={`art-placeholder-ink relative flex aspect-square items-center justify-center overflow-hidden border-[3px] ${
                     n === 2 ? "border-[#f2b32e]" : "border-[#4a4535]"
                   }`}
                 >
-                  <span className="font-mono text-[10px] text-[#a39b8b]">{n}</span>
+                  {images[n - 1] && (
+                    <img
+                      src={images[n - 1]}
+                      alt=""
+                      aria-hidden
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
+                  <span className="relative border border-[#12100c] bg-[#12100c]/80 px-1 font-mono text-[10px] text-[#f2ede1]">
+                    {n}
+                  </span>
                 </div>
               ))}
             </div>
@@ -248,7 +291,17 @@ function EditorDemoBand() {
 
           {/* Canvas */}
           <div className="art-placeholder-ink flex items-center justify-center border-b-[3px] border-[#f2ede1] p-8 lg:border-b-0 lg:border-r-[3px]">
-            <div className="art-placeholder-ink relative aspect-[4/3] w-full max-w-md border-[4px] border-[#f2ede1]">
+            <div className="art-placeholder-ink relative aspect-[4/3] w-full max-w-md overflow-hidden border-[4px] border-[#f2ede1]">
+              {images[1] && (
+                <img
+                  src={images[1]}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
               <span className="absolute left-4 top-4 max-w-[55%] border-[3px] border-[#12100c] bg-[#f8f5ec] px-3 py-2 text-[13px] font-semibold leading-tight text-[#12100c]">
                 We only get one shot at this.
               </span>
@@ -279,6 +332,8 @@ function EditorDemoBand() {
 /* -------------------------------------------------------------------------- */
 
 function StylesBand() {
+  const images = usePanelImages(6);
+
   return (
     <section className="border-b-4 border-[#12100c] bg-[#f2ede1] px-6 py-16 lg:px-12 lg:py-20">
       <div className="container mx-auto space-y-10">
@@ -290,12 +345,23 @@ function StylesBand() {
         </div>
 
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {STYLES.map((style) => (
+          {STYLES.map((style, index) => (
             <div
               key={style.id}
               className={`border-[3px] border-[#12100c] bg-[#f8f5ec] ${style.shadow}`}
             >
-              <div className="art-placeholder aspect-[4/3] border-b-[3px] border-[#12100c]" />
+              <div className="art-placeholder aspect-[4/3] overflow-hidden border-b-[3px] border-[#12100c]">
+                {images[index] && (
+                  <img
+                    src={images[index]}
+                    alt=""
+                    aria-hidden
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                )}
+              </div>
               <div className="space-y-2 p-5">
                 <h3 className="font-display text-[22px] uppercase leading-none text-[#12100c]">
                   {style.name}
