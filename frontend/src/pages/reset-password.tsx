@@ -61,20 +61,20 @@ export default function ResetPassword() {
   // If no token or email in URL, show an error
   if (!token || !email) {
     return (
-      <PageLayout className="bg-background text-foreground font-sans">
-        <main className="container max-w-md mx-auto px-4 py-20">
-          <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl text-center space-y-4">
-            <div className="flex justify-center">
-              <AlertTriangle className="w-16 h-16 text-yellow-500" />
+      <PageLayout>
+        <main className="container mx-auto max-w-md px-4 py-20">
+          <div className="border-[3px] border-[#12100c] bg-[#f8f5ec] p-8 text-center hard-shadow">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center border-[3px] border-[#12100c] bg-[#f2b32e] hard-shadow-sm">
+              <AlertTriangle className="h-8 w-8 text-[#12100c]" />
             </div>
-            <h1 className="text-2xl font-display font-bold tracking-tight">Invalid Reset Link</h1>
-            <p className="text-muted-foreground text-sm leading-relaxed">
+            <h1 className="mt-6 font-display text-[30px] uppercase leading-none text-[#12100c]">
+              Invalid Reset Link
+            </h1>
+            <p className="mt-4 text-[15px] leading-relaxed text-[#4a4535]">
               This password reset link is invalid or incomplete. Please request a new one.
             </p>
             <Link href="/forgot-password">
-              <Button className="mt-4 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 font-bold rounded-xl shadow-lg shadow-primary/20">
-                Request New Link
-              </Button>
+              <Button className="mt-6">Request New Link</Button>
             </Link>
           </div>
         </main>
@@ -83,47 +83,45 @@ export default function ResetPassword() {
   }
 
   return (
-    <PageLayout className="bg-background text-foreground font-sans">
-      <main className="container max-w-md mx-auto px-4 py-20">
-        <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
+    <PageLayout>
+      <main className="container mx-auto max-w-md px-4 py-20">
+        <div className="border-[3px] border-[#12100c] bg-[#f8f5ec] hard-shadow">
           {isReset ? (
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <CheckCircle className="w-16 h-16 text-green-500" />
+            <div className="p-8 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center border-[3px] border-[#12100c] bg-[#f2b32e] hard-shadow-sm">
+                <CheckCircle className="h-8 w-8 text-[#12100c]" />
               </div>
-              <h1 className="text-2xl font-display font-bold tracking-tight">Password Reset!</h1>
-              <p className="text-muted-foreground text-sm leading-relaxed">
+              <h1 className="mt-6 font-display text-[30px] uppercase leading-none text-[#12100c]">
+                Password Reset!
+              </h1>
+              <p className="mt-4 text-[15px] leading-relaxed text-[#4a4535]">
                 Your password has been successfully reset. You can now log in with your new password.
               </p>
               <Link href="/login">
-                <Button className="mt-4 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 font-bold rounded-xl shadow-lg shadow-primary/20">
-                  Go to Login
-                </Button>
+                <Button className="mt-6">Go to Login</Button>
               </Link>
             </div>
           ) : (
             <>
-              <div className="text-center space-y-2 mb-8">
-                <div className="flex justify-center mb-4">
-                  <ShieldCheck className="w-12 h-12 text-primary" />
-                </div>
-                <h1 className="text-3xl font-display font-bold tracking-tight">Reset Password</h1>
-                <p className="text-muted-foreground text-sm">
+              <div className="border-b-4 border-[#12100c] px-8 py-6">
+                <ShieldCheck className="mb-4 h-10 w-10 text-[#d8402f]" />
+                <h1 className="font-display text-[34px] uppercase leading-none text-[#12100c]">
+                  Reset Password
+                </h1>
+                <p className="mt-2 text-[14px] leading-relaxed text-[#4a4535]">
                   Enter your new password below.
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 p-8">
                 {error && (
-                  <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg p-3">
+                  <div className="border-[3px] border-[#12100c] bg-[#d8402f] p-3 font-mono text-[11px] uppercase tracking-[0.1em] text-[#f2ede1]">
                     {error}
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-bold text-muted-foreground">New Password</Label>
+                  <Label htmlFor="password">New Password</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -131,7 +129,7 @@ export default function ResetPassword() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter new password"
-                      className="h-12 bg-muted/50 border-border/80 focus:border-primary/50 pr-12"
+                      className="h-12 pr-12"
                       required
                       minLength={8}
                       maxLength={128}
@@ -139,16 +137,16 @@ export default function ResetPassword() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6d675a] transition-colors hover:text-[#12100c]"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">Minimum 8 characters</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#6d675a]">Minimum 8 characters</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-bold text-muted-foreground">Confirm New Password</Label>
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
                   <div className="relative">
                     <Input
                       id="confirmPassword"
@@ -156,7 +154,7 @@ export default function ResetPassword() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
-                      className="h-12 bg-muted/50 border-border/80 focus:border-primary/50 pr-12"
+                      className="h-12 pr-12"
                       required
                       minLength={8}
                       maxLength={128}
@@ -164,7 +162,7 @@ export default function ResetPassword() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6d675a] transition-colors hover:text-[#12100c]"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -174,7 +172,8 @@ export default function ResetPassword() {
                 <Button
                   type="submit"
                   disabled={isLoading || !password || !confirmPassword}
-                  className="w-full h-12 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
+                  size="lg"
+                  className="w-full"
                 >
                   {isLoading ? (
                     <><Loader2 className="mr-2 w-5 h-5 animate-spin" /> Resetting...</>
@@ -184,8 +183,8 @@ export default function ResetPassword() {
                 </Button>
               </form>
 
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                <Link href="/login" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
+              <p className="border-t-[3px] border-[#12100c] px-8 py-5 text-center">
+                <Link href="/login" className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.12em] text-[#d8402f] hover:underline">
                   <ArrowLeft className="w-4 h-4" /> Back to Login
                 </Link>
               </p>

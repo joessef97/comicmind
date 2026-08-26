@@ -29,78 +29,77 @@ export default function ForgotPassword() {
   };
 
   return (
-    <PageLayout className="bg-background text-foreground font-sans">
-      <main className="container max-w-md mx-auto px-4 py-20">
-        <div className="bg-card border border-border/70 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
+    <PageLayout>
+      <main className="container mx-auto max-w-md px-4 py-20">
+        <div className="border-[3px] border-[#12100c] bg-[#f8f5ec] hard-shadow">
           {isSent ? (
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <CheckCircle className="w-16 h-16 text-green-500" />
+            <div className="p-8 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center border-[3px] border-[#12100c] bg-[#f2b32e] hard-shadow-sm">
+                <CheckCircle className="h-8 w-8 text-[#12100c]" />
               </div>
-              <h1 className="text-2xl font-display font-bold tracking-tight">Check Your Email</h1>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                If an account with that email exists, we've sent a password reset link. 
+              <h1 className="mt-6 font-display text-[30px] uppercase leading-none text-[#12100c]">
+                Check Your Email
+              </h1>
+              <p className="mt-4 text-[15px] leading-relaxed text-[#4a4535]">
+                If an account with that email exists, we've sent a password reset link.
                 Please check your inbox and spam folder.
               </p>
-              <p className="text-muted-foreground text-xs">
+              <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-[#6d675a]">
                 The link will expire in 45 minutes.
               </p>
               <Link href="/login">
-                <Button variant="outline" className="mt-4 border-border/80 hover:bg-muted/70">
-                  <ArrowLeft className="mr-2 w-4 h-4" /> Back to Login
+                <Button variant="outline" className="mt-6">
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
                 </Button>
               </Link>
             </div>
           ) : (
             <>
-              <div className="text-center space-y-2 mb-8">
-                <div className="flex justify-center mb-4">
-                  <Mail className="w-12 h-12 text-primary" />
-                </div>
-                <h1 className="text-3xl font-display font-bold tracking-tight">Forgot Password?</h1>
-                <p className="text-muted-foreground text-sm">
+              <div className="border-b-4 border-[#12100c] px-8 py-6">
+                <Mail className="mb-4 h-10 w-10 text-[#d8402f]" />
+                <h1 className="font-display text-[34px] uppercase leading-none text-[#12100c]">
+                  Forgot Password?
+                </h1>
+                <p className="mt-2 text-[14px] leading-relaxed text-[#4a4535]">
                   Enter your email address and we'll send you a link to reset your password.
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 p-8">
                 {error && (
-                  <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg p-3">
+                  <div className="border-[3px] border-[#12100c] bg-[#d8402f] p-3 font-mono text-[11px] uppercase tracking-[0.1em] text-[#f2ede1]">
                     {error}
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-bold text-muted-foreground">Email Address</Label>
+                  <Label htmlFor="email">Email Address</Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
-                    className="h-12 bg-muted/50 border-border/80 focus:border-primary/50"
+                    className="h-12"
                     required
                   />
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={isLoading || !email}
-                  className="w-full h-12 bg-gradient-to-r from-primary to-[#d946ef] hover:opacity-90 font-bold text-lg rounded-xl shadow-lg shadow-primary/20"
-                >
+                <Button type="submit" disabled={isLoading || !email} size="lg" className="w-full">
                   {isLoading ? (
-                    <><Loader2 className="mr-2 w-5 h-5 animate-spin" /> Sending...</>
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Sending...</>
                   ) : (
                     "Send Reset Link"
                   )}
                 </Button>
               </form>
 
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                <Link href="/login" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
-                  <ArrowLeft className="w-4 h-4" /> Back to Login
+              <p className="border-t-[3px] border-[#12100c] px-8 py-5 text-center">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.12em] text-[#d8402f] hover:underline"
+                >
+                  <ArrowLeft className="h-4 w-4" /> Back to Login
                 </Link>
               </p>
             </>
