@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
-import { useComicRun, useStyleSamples, usePanelImages } from "@/hooks/use-panel-images";
+import {
+  useComicRun,
+  useStyleSamples,
+  usePanelImages,
+  __resetPublicComicsCache,
+} from "@/hooks/use-panel-images";
 
 /**
  * The public list endpoint trims every comic to its first panel
@@ -52,6 +57,8 @@ const DETAIL_RESPONSE = {
 };
 
 beforeEach(() => {
+  // The list request is shared process-wide, so clear it between cases.
+  __resetPublicComicsCache();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
