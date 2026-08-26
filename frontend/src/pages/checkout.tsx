@@ -99,30 +99,25 @@ export default function Checkout() {
   }
 
   return (
-    <PageLayout className="bg-background text-foreground">
-      <main className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-[-120px] top-[-120px] h-[360px] w-[360px] rounded-full bg-violet-600/20 blur-3xl" />
-          <div className="absolute right-[-140px] top-[120px] h-[420px] w-[420px] rounded-full bg-fuchsia-500/10 blur-3xl" />
-        </div>
-
+    <PageLayout>
+      <main className="bg-[#f2ede1]">
         <div className="container mx-auto max-w-6xl px-4 py-16 md:py-20">
-          <div className="mb-8 flex items-center gap-2 text-sm text-muted-foreground">
-            <Lock className="h-4 w-4 text-primary" />
+          <div className="mb-8 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-[#4a4535]">
+            <Lock className="h-4 w-4 text-[#d8402f]" />
             Demo payment flow
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <section className="rounded-2xl border border-border/70 bg-card p-6 backdrop-blur-md shadow-[0_20px_60px_rgba(0,0,0,0.18)] md:p-8">
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+            <section className="border-[3px] border-[#12100c] bg-[#f8f5ec] p-6 md:p-8">
               <div className="mb-8">
-                <p className="inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
-                  <Sparkles className="h-3.5 w-3.5" />
+                <p className="inline-flex items-center gap-2 border-[3px] border-[#12100c] bg-[#f2b32e] px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-[#12100c] hard-shadow-sm">
+                  <Sparkles className="h-3 w-3" />
                   Secure Checkout
                 </p>
-                <h1 className="mt-4 text-3xl font-display font-bold tracking-tight text-foreground md:text-4xl">
+                <h1 className="mt-6 font-display text-[40px] uppercase leading-[0.95] text-[#12100c] md:text-[52px]">
                   Secure Checkout
                 </h1>
-                <p className="mt-3 text-sm text-muted-foreground md:text-base">
+                <p className="mt-4 text-[15px] leading-relaxed text-[#4a4535]">
                   Demo payment only. No real charges will be made.
                 </p>
               </div>
@@ -134,7 +129,7 @@ export default function Checkout() {
                     onChange={handleChange("cardNumber")}
                     inputMode="numeric"
                     placeholder="4242 4242 4242 4242"
-                    className="h-12 w-full rounded-xl border border-input bg-background px-4 text-foreground outline-none transition-all duration-300 placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/30"
+                    className="h-12 w-full border-[3px] border-[#12100c] bg-[#f8f5ec] px-4 font-mono text-[13px] text-[#12100c] outline-none placeholder:text-[#6d675a] focus:ring-2 focus:ring-[#12100c]"
                   />
                 </Field>
                 <Field label="Name on Card" fullWidth>
@@ -142,7 +137,7 @@ export default function Checkout() {
                     value={form.name}
                     onChange={handleChange("name")}
                     placeholder="Jane Doe"
-                    className="h-12 w-full rounded-xl border border-input bg-background px-4 text-foreground outline-none transition-all duration-300 placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/30"
+                    className="h-12 w-full border-[3px] border-[#12100c] bg-[#f8f5ec] px-4 font-mono text-[13px] text-[#12100c] outline-none placeholder:text-[#6d675a] focus:ring-2 focus:ring-[#12100c]"
                   />
                 </Field>
                 <Field label="Expiry Date">
@@ -150,7 +145,7 @@ export default function Checkout() {
                     value={form.expiry}
                     onChange={handleChange("expiry")}
                     placeholder="MM / YY"
-                    className="h-12 w-full rounded-xl border border-input bg-background px-4 text-foreground outline-none transition-all duration-300 placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/30"
+                    className="h-12 w-full border-[3px] border-[#12100c] bg-[#f8f5ec] px-4 font-mono text-[13px] text-[#12100c] outline-none placeholder:text-[#6d675a] focus:ring-2 focus:ring-[#12100c]"
                   />
                 </Field>
                 <Field label="CVC">
@@ -158,24 +153,25 @@ export default function Checkout() {
                     value={form.cvc}
                     onChange={handleChange("cvc")}
                     placeholder="123"
-                    className="h-12 w-full rounded-xl border border-input bg-background px-4 text-foreground outline-none transition-all duration-300 placeholder:text-muted-foreground/60 focus:border-primary/50 focus:ring-2 focus:ring-primary/30"
+                    className="h-12 w-full border-[3px] border-[#12100c] bg-[#f8f5ec] px-4 font-mono text-[13px] text-[#12100c] outline-none placeholder:text-[#6d675a] focus:ring-2 focus:ring-[#12100c]"
                   />
                 </Field>
               </div>
 
-              <div className="mt-6 rounded-xl border border-border/70 bg-muted/50 p-4 text-sm text-muted-foreground">
+              <div className="mt-6 border-[3px] border-dashed border-[#6d675a] p-4 font-mono text-[11px] uppercase leading-relaxed tracking-[0.1em] text-[#4a4535]">
                 This is a demo payment. No real transaction will occur.
               </div>
 
-              <div className="mt-6">
+              <div className="mt-8">
                 <Button
                   onClick={handlePayNow}
                   disabled={isProcessing}
-                  className="h-12 w-full rounded-xl bg-gradient-to-r from-primary via-fuchsia-600 to-pink-600 text-primary-foreground shadow-[0_12px_34px_rgba(168,85,247,0.34)] transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_16px_42px_rgba(217,70,239,0.42)] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
+                  size="lg"
+                  className="w-full disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isProcessing ? (
                     <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                      <span className="h-4 w-4 animate-spin border-2 border-[#f2ede1] border-t-transparent" />
                       Processing...
                     </>
                   ) : (
@@ -186,42 +182,44 @@ export default function Checkout() {
                   )}
                 </Button>
                 {errorMessage ? (
-                  <p className="mt-3 text-sm text-red-500">{errorMessage}</p>
+                  <p className="mt-4 border-[3px] border-[#12100c] bg-[#d8402f] p-3 font-mono text-[11px] uppercase tracking-[0.1em] text-[#f2ede1]">
+                    {errorMessage}
+                  </p>
                 ) : null}
               </div>
             </section>
 
-            <aside className="rounded-2xl border border-border/70 bg-card p-6 backdrop-blur-md shadow-[0_20px_60px_rgba(0,0,0,0.18)] md:p-8">
-              <div className="mb-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <aside className="h-fit border-[3px] border-[#12100c] bg-[#12100c] p-6 md:p-8">
+              <div className="mb-6 border-b-[3px] border-[#f2ede1] pb-6">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#a39b8b]">
                   Order Summary
                 </p>
-                <h2 className="mt-3 text-2xl font-display font-bold text-foreground">
+                <h2 className="mt-3 font-display text-[28px] uppercase leading-none text-[#f2ede1]">
                   {formatPlanName(plan)}
                 </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-3 text-[14px] leading-relaxed text-[#a39b8b]">
                   Perfect for exploring ComicMind’s AI comic creation workflow.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-muted/40 p-5">
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div>
+                <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.12em] text-[#a39b8b]">
                   <span>{formatPlanName(plan)}</span>
                   <span>{formattedPrice}</span>
                 </div>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-3 text-[14px] leading-relaxed text-[#a39b8b]">
                   Includes a flexible demo plan for generating comic stories with AI-powered tools.
                 </p>
 
-                <div className="my-5 h-px bg-border/80" />
+                <div className="my-6 h-[3px] bg-[#f2ede1]" />
 
-                <div className="flex items-center justify-between text-base font-semibold text-foreground">
+                <div className="flex items-center justify-between border-[3px] border-[#12100c] bg-[#f2b32e] px-4 py-3 font-display text-[22px] uppercase leading-none text-[#12100c]">
                   <span>Total</span>
                   <span>{formattedPrice}</span>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-xl border border-border/70 bg-muted/40 p-4 text-sm text-muted-foreground">
+              <div className="mt-6 border-2 border-[#4a4535] p-4 font-mono text-[10px] uppercase leading-relaxed tracking-[0.1em] text-[#a39b8b]">
                 {plan} Stories selected. You can change plans anytime before confirming the demo checkout.
               </div>
             </aside>
@@ -235,7 +233,7 @@ export default function Checkout() {
 function Field({ label, children, fullWidth = false }: { label: string; children: React.ReactNode; fullWidth?: boolean }) {
   return (
     <label className={fullWidth ? "sm:col-span-2" : ""}>
-      <span className="mb-2 block text-sm font-medium text-muted-foreground">{label}</span>
+      <span className="mb-2 block font-mono text-[11px] uppercase tracking-[0.14em] text-[#4a4535]">{label}</span>
       {children}
     </label>
   );
