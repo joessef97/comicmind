@@ -163,10 +163,36 @@ function StepsBand() {
 /* 3. Consistency explainer                                                   */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The comic generators surveyed for the project, and when. Naming a product
+ * and saying it lacks a feature is a factual claim, so the caption states the
+ * scope and the date rather than asserting something open-ended about every
+ * tool that exists — a survey is true of what it tested, when it tested it.
+ *
+ * Add the tools that were actually checked, e.g. ["Tool A", "Tool B"].
+ */
+const SURVEYED_TOOLS: string[] = [];
+
+/** Month and year the survey was run, shown alongside the names. */
+const SURVEY_DATE = "";
+
+/** Screenshots of surveyed output, when we have permission to show them. */
+const SURVEYED_TOOL_PANELS: string[] = [];
+
+function surveyCaption(): string | undefined {
+  if (!SURVEYED_TOOLS.length) return undefined;
+
+  const names =
+    SURVEYED_TOOLS.length === 1
+      ? SURVEYED_TOOLS[0]
+      : `${SURVEYED_TOOLS.slice(0, -1).join(", ")} and ${SURVEYED_TOOLS.at(-1)}`;
+
+  return `Surveyed${SURVEY_DATE ? ` ${SURVEY_DATE}` : ""}: ${names} — none held one character across panels`;
+}
+
 function ConsistencyBand() {
-  // Real proof for our own claim: consecutive panels from one published comic,
-  // same cast, in story order. The comparison row is left as a placeholder —
-  // see the note on ThumbnailRow.
+  // Our side is proof, not illustration: consecutive panels from one published
+  // comic, same cast, in story order.
   const run = useComicRun(4);
 
   return (
@@ -185,7 +211,12 @@ function ConsistencyBand() {
         </div>
 
         <div className="space-y-8">
-          <ThumbnailRow label="Other tools" variant="dashed" images={[]} />
+          <ThumbnailRow
+            label="Other tools"
+            variant="dashed"
+            images={SURVEYED_TOOL_PANELS}
+            caption={surveyCaption()}
+          />
           <ThumbnailRow
             label="ComicMind"
             variant="solid"
@@ -199,11 +230,10 @@ function ConsistencyBand() {
 }
 
 /**
- * The "Other tools" row is deliberately left as empty hatching. Filling it
- * would mean either fabricating a competitor's output or passing ComicMind's
- * own panels off as someone else's — both would make the comparison a claim we
- * cannot stand behind. Drop real screenshots in via `images` to make it a
- * genuine side-by-side.
+ * Boxes fill from `images` when real screenshots exist and fall back to a
+ * marked placeholder otherwise. The comparison row is never filled with
+ * ComicMind's own panels — passing our output off as someone else's would make
+ * the side-by-side a claim we could not stand behind.
  */
 function ThumbnailRow({
   label,
