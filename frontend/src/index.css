@@ -99,9 +99,60 @@
   /* Replit-era variables still referenced by button/badge variants. */
   --button-outline: hsl(40 20% 6%);
   --badge-outline: hsl(40 20% 6%);
+
+  /* Ink-on-paper marks. These flip with the chrome so offset shadows,
+     halftone dots and hatching stay visible on either ground. */
+  --mark: #12100c;
+  --hatch-a: #e2ddcd;
+  --hatch-b: #d7d1bf;
 }
 
-/* Ink chrome — the same palette inverted, used by the theme toggle. */
+/*
+ * Region scopes. Newsprint picks its chrome per region, not per user
+ * preference: public pages are paper, the studio is ink. Regions that hardcode
+ * a paper background also pin the paper tokens with `.light`, so borders,
+ * outlines and offset shadows can never resolve to the same colour as the
+ * ground underneath them. `.dark` is declared after `.light` so a nested ink
+ * region wins when an element carries both.
+ */
+.light {
+  --background: 42 40% 92%;
+  --foreground: 40 20% 6%;
+
+  --card: 45 46% 95%;
+  --card-foreground: 40 20% 6%;
+
+  --popover: 45 46% 95%;
+  --popover-foreground: 40 20% 6%;
+
+  --primary: 6 68% 52%;
+  --primary-foreground: 42 40% 92%;
+
+  --secondary: 229 68% 52%;
+  --secondary-foreground: 42 40% 92%;
+
+  --muted: 43 27% 82%;
+  --muted-foreground: 41 10% 39%;
+
+  --accent: 41 88% 56%;
+  --accent-foreground: 40 20% 6%;
+
+  --destructive: 6 68% 52%;
+  --destructive-foreground: 42 40% 92%;
+
+  --border: 40 20% 6%;
+  --input: 40 20% 6%;
+  --ring: 40 20% 6%;
+
+  --button-outline: hsl(40 20% 6%);
+  --badge-outline: hsl(40 20% 6%);
+
+  --mark: #12100c;
+  --hatch-a: #e2ddcd;
+  --hatch-b: #d7d1bf;
+}
+
+/* Ink chrome — the same palette inverted. */
 .dark {
   --background: 40 20% 6%;
   --foreground: 42 40% 92%;
@@ -133,6 +184,10 @@
 
   --button-outline: hsl(42 40% 92%);
   --badge-outline: hsl(42 40% 92%);
+
+  --mark: #f2ede1;
+  --hatch-a: #302b20;
+  --hatch-b: #262218;
 }
 
 @layer base {
@@ -155,9 +210,9 @@
    --------------------------------------------------------------------------- */
 
 /* Hard offset shadows. Never blurred — this is ink on paper, not glass. */
-.hard-shadow    { box-shadow: 6px 6px 0 #12100c; }
-.hard-shadow-sm { box-shadow: 4px 4px 0 #12100c; }
-.hard-shadow-lg { box-shadow: 7px 7px 0 #12100c; }
+.hard-shadow    { box-shadow: 6px 6px 0 var(--mark); }
+.hard-shadow-sm { box-shadow: 4px 4px 0 var(--mark); }
+.hard-shadow-lg { box-shadow: 7px 7px 0 var(--mark); }
 .hard-shadow-paper    { box-shadow: 6px 6px 0 #f2ede1; }
 .hard-shadow-red      { box-shadow: 6px 6px 0 #d8402f; }
 .hard-shadow-blue     { box-shadow: 6px 6px 0 #2f4fd8; }
@@ -169,7 +224,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: radial-gradient(#12100c 1.2px, transparent 1.2px);
+  background-image: radial-gradient(var(--mark) 1.2px, transparent 1.2px);
   background-size: 9px 9px;
   opacity: 0.18;
 }
@@ -178,17 +233,17 @@
   opacity: 0.22;
 }
 
-/* Display numerals: colour fill with an ink outline drawn behind it. */
+/* Display numerals: colour fill with an outline drawn behind it. */
 .numeral-outline {
   font-family: var(--font-display);
-  -webkit-text-stroke: 1.5px #12100c;
+  -webkit-text-stroke: 1.5px var(--mark);
   paint-order: stroke fill;
 }
 .numeral-outline-paper { -webkit-text-stroke: 3px #f2ede1; }
 
 /* Diagonal hatch standing in for art that is loading or absent. */
 .art-placeholder {
-  background-image: repeating-linear-gradient(135deg, #e2ddcd 0 9px, #d7d1bf 9px 18px);
+  background-image: repeating-linear-gradient(135deg, var(--hatch-a) 0 9px, var(--hatch-b) 9px 18px);
 }
 .art-placeholder-ink {
   background-image: repeating-linear-gradient(135deg, #302b20 0 9px, #262218 9px 18px);

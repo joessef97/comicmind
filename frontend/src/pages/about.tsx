@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { PageLayout } from "@/components/layout/page-layout";
+import { usePanelImages } from "@/hooks/use-panel-images";
+import { cn } from "@/lib/utils";
 import {
   Sparkles,
   Layers,
@@ -34,7 +36,8 @@ const TONE_CLASSES: Record<Tone, { card: string; title: string; body: string; ic
     icon: "border-[#12100c] bg-[#f2ede1] text-[#12100c]",
   },
   ink: {
-    card: "bg-[#12100c] hard-shadow-yellow",
+    // Ink fill needs a paper edge; an ink border on ink reads as no border.
+    card: "dark border-[#f2ede1] bg-[#12100c] hard-shadow-yellow",
     title: "text-[#f2ede1]",
     body: "text-[#a39b8b]",
     icon: "border-[#f2ede1] bg-[#1b1811] text-[#f2b32e]",
@@ -89,6 +92,8 @@ const FEATURES: { icon: ReactNode; title: string; description: string; tone: Ton
 const IMAGE_BLOCK_SHADOWS = ["hard-shadow-red", "hard-shadow-blue", "hard-shadow-yellow", "hard-shadow"];
 
 export default function About() {
+  const images = usePanelImages(4);
+
   return (
     <PageLayout>
       <main className="bg-[#f2ede1]">
@@ -110,8 +115,19 @@ export default function About() {
               {IMAGE_BLOCK_SHADOWS.map((shadow, i) => (
                 <div
                   key={i}
-                  className={`art-placeholder aspect-square border-[3px] border-[#12100c] ${shadow}`}
-                />
+                  className={`art-placeholder aspect-square overflow-hidden border-[3px] border-[#12100c] ${shadow}`}
+                >
+                  {images[i] && (
+                    <img
+                      src={images[i]}
+                      alt=""
+                      aria-hidden
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </section>
@@ -148,7 +164,7 @@ export default function About() {
 
           {/* Closing CTA */}
           <section className="pt-16">
-            <div className="border-[3px] border-[#12100c] bg-[#12100c] px-6 py-14 text-center sm:px-10">
+            <div className="dark border-[3px] border-[#12100c] bg-[#12100c] px-6 py-14 text-center sm:px-10">
               <h2 className="font-display text-[32px] uppercase leading-[0.95] text-[#f2ede1] sm:text-[42px]">
                 Ready to create your comic?
               </h2>
@@ -187,7 +203,7 @@ function FeatureCard({
   const t = TONE_CLASSES[tone];
 
   return (
-    <article className={`border-[3px] border-[#12100c] p-6 ${t.card}`}>
+    <article className={cn("border-[3px] border-[#12100c] p-6", t.card)}>
       <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center border-[3px] ${t.icon}`}>
         {icon}
       </div>

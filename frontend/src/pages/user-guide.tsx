@@ -308,7 +308,7 @@ export default function UserGuide() {
           </section>
 
           {/* Closing CTA */}
-          <section className="mt-14 border-[3px] border-[#12100c] bg-[#12100c] p-8 text-center md:p-12">
+          <section className="dark mt-14 border-[3px] border-[#12100c] bg-[#12100c] p-8 text-center md:p-12">
             <h2 className="font-display text-[32px] uppercase leading-[0.95] text-[#f2ede1] sm:text-[42px]">
               Ready to create your comic?
             </h2>

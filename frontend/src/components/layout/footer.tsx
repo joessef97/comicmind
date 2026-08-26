@@ -6,7 +6,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t-4 border-[#12100c] bg-[#12100c] text-[#a39b8b]">
+    <footer className="dark border-t-4 border-[#12100c] bg-[#12100c] text-[#a39b8b]">
       <div className="container mx-auto px-4 py-7">
         <div className="flex flex-col items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.08em] md:flex-row">
           <p>ComicMind © {year}. All rights reserved.</p>
