@@ -1,35 +1,12 @@
-import { useState, useEffect } from "react";
 import { TopRatedComicPreview } from "./top-rated-comic-preview";
 import { getDisplayImageUrl } from "@/lib/utils";
-
-interface BackgroundComic {
-  _id: string;
-  title: string;
-  coverUrl?: string;
-  panels?: { imageUrl: string }[];
-}
+import { usePublicComics, type PublicComic } from "@/hooks/use-panel-images";
 
 /** Rotations are fixed by the Newsprint spec — pasted-up panels, not a fan. */
 const CARD_ROTATIONS = ["-5deg", "4deg", "3deg", "-6deg"];
 
 export function HeroCardStack() {
-  const [backgroundComics, setBackgroundComics] = useState<BackgroundComic[]>([]);
-
-  useEffect(() => {
-    async function fetchComics() {
-      try {
-        const res = await fetch("/api/comics/public?limit=4");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.comics && Array.isArray(data.comics)) {
-          setBackgroundComics(data.comics.slice(0, 4));
-        }
-      } catch {
-        // Hatched placeholders stand in on error.
-      }
-    }
-    fetchComics();
-  }, []);
+  const backgroundComics = usePublicComics(4);
 
   return (
     <div className="relative w-full">
@@ -42,8 +19,8 @@ export function HeroCardStack() {
           <TopRatedComicPreview />
         </div>
 
-        <PanelCard comic={backgroundComics[1]} rotation={CARD_ROTATIONS[1]} />
-        <PanelCard comic={backgroundComics[2]} rotation={CARD_ROTATIONS[2]} />
+        <PanelCard comic={backgroundComics[0]} rotation={CARD_ROTATIONS[1]} />
+        <PanelCard comic={backgroundComics[1]} rotation={CARD_ROTATIONS[2]} />
 
         {/* The punchline card. */}
         <div
@@ -61,8 +38,9 @@ export function HeroCardStack() {
   );
 }
 
-function PanelCard({ comic, rotation }: { comic?: BackgroundComic; rotation: string }) {
-  const imageUrl = comic?.coverUrl || comic?.panels?.[0]?.imageUrl;
+function PanelCard({ comic, rotation }: { comic?: PublicComic; rotation: string }) {
+  // Panel one doubles as the cover; the API exposes no separate cover field.
+  const imageUrl = comic?.panels?.[0]?.imageUrl;
 
   return (
     <div
