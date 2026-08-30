@@ -97,9 +97,12 @@ export function defaultPanelJobOptions(): JobsOptions {
  * Deterministic job id per panel. BullMQ refuses to enqueue a duplicate id
  * while the job still exists, so a retried submit of the same generation
  * cannot double-render a panel that is already queued or running.
+ *
+ * `:` is reserved by BullMQ's own Redis key namespacing and is rejected in
+ * custom ids, hence the dashed form.
  */
 export function panelJobId(ledgerJobId: string, panelIndex: number): string {
-  return `${ledgerJobId}:${panelIndex}`;
+  return `${ledgerJobId}-panel-${panelIndex}`;
 }
 
 export async function enqueuePanels(panels: PanelJobData[]): Promise<number> {
