@@ -26,18 +26,30 @@ async function buildAll() {
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
 
-  await esbuild({
-    entryPoints: ["backend/src/server.ts"],
-    platform: "node",
+  const shared = {
+    platform: "node" as const,
     bundle: true,
-    format: "cjs",
-    outfile: "dist/index.cjs",
+    format: "cjs" as const,
     define: {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
     external: externals,
-    logLevel: "info",
+    logLevel: "info" as const,
+  };
+
+  await esbuild({
+    ...shared,
+    entryPoints: ["backend/src/server.ts"],
+    outfile: "dist/index.cjs",
+  });
+
+  // Standalone worker entrypoint, used when the queue runs as its own process
+  // rather than inline in the API (see backend/src/worker.ts).
+  await esbuild({
+    ...shared,
+    entryPoints: ["backend/src/worker.ts"],
+    outfile: "dist/worker.cjs",
   });
 }
 
