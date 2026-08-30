@@ -65,6 +65,15 @@ export function getRedisConnection(): IORedis | null {
   return connection;
 }
 
+/**
+ * Redis key namespace. Lets several deployments -- or several test files
+ * running in parallel -- share one Redis instance without consuming each
+ * other's jobs.
+ */
+export function queuePrefix(): string {
+  return process.env.BULLMQ_PREFIX || "bull";
+}
+
 export function getPanelQueue(): Queue<PanelJobData> | null {
   const conn = getRedisConnection();
   if (!conn) return null;
@@ -72,6 +81,7 @@ export function getPanelQueue(): Queue<PanelJobData> | null {
   if (!queue) {
     queue = new Queue<PanelJobData>(PANEL_QUEUE_NAME, {
       connection: conn as unknown as ConnectionOptions,
+      prefix: queuePrefix(),
       defaultJobOptions: defaultPanelJobOptions(),
     });
     console.log("[queue] Panel generation queue ready");

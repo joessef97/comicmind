@@ -19,6 +19,7 @@ import * as jobService from "./job.service";
 import {
   PANEL_QUEUE_NAME,
   getRedisConnection,
+  queuePrefix,
   type PanelJobData,
 } from "./queue";
 
@@ -154,6 +155,7 @@ export function startPanelWorker(): Worker<PanelJobData> | null {
 
   const worker = new Worker<PanelJobData>(PANEL_QUEUE_NAME, renderPanel, {
     connection: connection as unknown as ConnectionOptions,
+    prefix: queuePrefix(),
     concurrency,
   });
 
