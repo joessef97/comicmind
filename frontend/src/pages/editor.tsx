@@ -306,6 +306,8 @@ export default function Editor() {
     try {
       let storyPanels: Panel[] = [];
       let csText = characterSheet || "";
+      // Local capture: state set below is not readable again in this same run.
+      let jobIdCaptured: string | null = null;
 
       if (shouldReuseText) {
         setIsGeneratingStory(false);
@@ -323,6 +325,9 @@ export default function Editor() {
         const storyData = await storyRes.json();
         storyPanels = storyData.panels;
         setPanels(storyPanels);
+
+        // Present only when the server-side generation ledger is enabled.
+        jobIdCaptured = storyData.jobId ?? null;
 
         // Store the character sheet for image consistency
         csText = storyData.characterSheet?.description || "";
@@ -428,6 +433,7 @@ export default function Editor() {
             const panel = panelsWithImages[i];
             const imgRes = await apiRequest("POST", "/api/images/generate", {
               comicId: activeComicId,
+              jobId: jobIdCaptured || undefined,
               panelIndex: i,
               prompt: panel.description,
               style: selectedStyle,
