@@ -10,6 +10,8 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     testTimeout: 15000,
+    // Cold TS import of backend/src/app exceeds the 10s default on CI runners.
+    hookTimeout: 30000,
   },
   resolve: {
     alias: {
