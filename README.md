@@ -71,10 +71,14 @@ docker compose stop worker     # mid-generation
 docker compose start worker    # queued panels resume where they left off
 ```
 
-That behaviour is also pinned by a test rather than left to a demo:
-`tests/jobs/worker-resume.integration.test.ts` runs two real BullMQ workers against real Redis and
-Postgres — the first renders part of a job and shuts down, the second takes over the leftovers — and
-asserts every panel was rendered exactly once across both.
+Both durability claims are pinned by tests rather than left to a demo, and both run against real Redis
+and Postgres in CI:
+
+- `tests/jobs/worker-resume.integration.test.ts` — two real BullMQ workers: the first renders part of a
+  job and shuts down, the second takes over the leftovers. Every panel is rendered exactly once.
+- `tests/jobs/tab-close.integration.test.ts` — the real Express app over real HTTP with a real worker.
+  A live SSE connection is destroyed mid-generation, the way a closing browser tab severs its socket.
+  The remaining panels still render, and a returning client is served the finished comic.
 
 On Render's free tier only one process is available, so `WORKER_INLINE=true` hosts the same worker inside
 the API rather than deploying it separately.
@@ -124,7 +128,7 @@ performance/  K6 load tests against the real routes
 
 ## Testing
 
-17 Vitest suites. `npm test` needs no external services — the API layer is tested with Supertest against
+18 Vitest suites. `npm test` needs no external services — the API layer is tested with Supertest against
 mocked storage and AI services, so the suite runs offline and without API keys.
 
 ```bash
@@ -149,6 +153,7 @@ npm run check     # tsc type check
 | `tests/jobs/client-fallback.test.ts` | the client degrades quietly when queueing is unavailable |
 | `tests/jobs/ledger-optional.test.ts` | every ledger call is a no-op without a database |
 | `tests/jobs/worker-resume.integration.test.ts` | a stopped worker's queued panels are picked up by the next one |
+| `tests/jobs/tab-close.integration.test.ts` | generation survives the client vanishing, end to end through the real app |
 | `tests/jobs/*.integration.test.ts` | real Postgres and Redis semantics (see below) |
 
 The integration suites skip themselves without `DATABASE_URL` / `REDIS_URL`, which keeps `npm test`
