@@ -15,6 +15,10 @@ import {
   type PanelJobData,
 } from "../../backend/src/jobs/queue";
 
+// Isolate this file's Redis keys: vitest runs test files in parallel and
+// they would otherwise consume each other's jobs off the shared queue.
+process.env.BULLMQ_PREFIX = "test-queue";
+
 const hasRedis = Boolean(process.env.REDIS_URL);
 
 function panel(jobId: string, panelIndex: number): PanelJobData {

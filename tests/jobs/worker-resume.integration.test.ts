@@ -34,8 +34,13 @@ import {
   enqueuePanels,
   getPanelQueue,
   getRedisConnection,
+  queuePrefix,
   type PanelJobData,
 } from "../../backend/src/jobs/queue";
+
+// Isolate this file's Redis keys: vitest runs test files in parallel and
+// they would otherwise consume each other's jobs off the shared queue.
+process.env.BULLMQ_PREFIX = "test-resume";
 
 const hasInfra = Boolean(process.env.REDIS_URL && process.env.DATABASE_URL);
 const userId = `resume-user-${Date.now()}`;
@@ -66,6 +71,8 @@ async function processPanel(job: Job<PanelJobData>) {
 function startWorker(processor: (job: Job<PanelJobData>) => Promise<void>, concurrency = 1) {
   return new Worker<PanelJobData>(PANEL_QUEUE_NAME, processor, {
     connection: getRedisConnection() as unknown as ConnectionOptions,
+    // Must match the queue, or this worker listens on a namespace nothing writes to.
+    prefix: queuePrefix(),
     concurrency,
   });
 }
@@ -95,20 +102,19 @@ describe.skipIf(!hasInfra)("worker restart", () => {
   });
 
   it("resumes panels queued before the worker stopped", async () => {
-    const created = await createJob({ userId, totalPanels: 4 });
+    const total = 8;
+    const created = await createJob({ userId, totalPanels: total });
     const ledgerJobId = created!.job.id;
 
-    await enqueuePanels([0, 1, 2, 3].map((i) => panelData(ledgerJobId, i)));
+    await enqueuePanels(
+      Array.from({ length: total }, (_, i) => panelData(ledgerJobId, i)),
+    );
 
-    // First worker: handle two panels, then stop the way `docker compose stop`
-    // does — gracefully, leaving the rest queued.
+    // First worker renders a couple of panels, then shuts down the way
+    // `docker compose stop worker` does: close() stops fetching new jobs and
+    // waits for in-flight ones, so the rest stay queued in Redis.
     let handled = 0;
     const first = startWorker(async (job) => {
-      if (handled >= 2) {
-        // Refuse further work so the remaining panels stay queued for the
-        // next worker rather than being drained by this one.
-        throw new Error("simulated shutdown");
-      }
       handled += 1;
       await processPanel(job);
     });
@@ -118,6 +124,8 @@ describe.skipIf(!hasInfra)("worker restart", () => {
 
     const midway = await getJob(ledgerJobId);
     expect(midway!.completedPanels).toBeGreaterThanOrEqual(2);
+    // The point of the test: work was left behind, not silently dropped.
+    expect(midway!.completedPanels).toBeLessThan(total);
     expect(midway!.status).toBe("running");
 
     // A fresh worker takes over the leftovers.
@@ -133,7 +141,7 @@ describe.skipIf(!hasInfra)("worker restart", () => {
     expect(finished).toBe(true);
 
     const job = await getJob(ledgerJobId);
-    expect(job!.completedPanels).toBe(4);
+    expect(job!.completedPanels).toBe(total);
 
     const panels = await getJobPanels(ledgerJobId);
     expect(panels.every((p) => p.status === "succeeded")).toBe(true);
