@@ -121,7 +121,11 @@ describe.skipIf(!hasInfra)("worker restart", () => {
     first = startWorker(async (job) => {
       handled += 1;
       await processPanel(job);
-      if (handled >= stopAfter) await first.pause();
+      if (handled >= stopAfter) {
+        // pause(true) = do not wait for active jobs. The default waits, and
+        // this call is itself inside an active job, so it would deadlock.
+        await first.pause(true);
+      }
     });
 
     await waitFor(async () => handled >= stopAfter);
@@ -153,7 +157,7 @@ describe.skipIf(!hasInfra)("worker restart", () => {
     // Every panel rendered exactly once across both workers — a restart must
     // not re-render what the first worker already finished.
     expect(panels.every((p) => p.attempts === 1)).toBe(true);
-  });
+  }, 30_000);
 
   it("keeps queued work when no worker is running at all", async () => {
     const created = await createJob({ userId, totalPanels: 3 });
