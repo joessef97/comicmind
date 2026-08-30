@@ -18,6 +18,7 @@ import {
 } from "../../services/image-storage";
 import { translatePanelsToArabic } from "../../middleware/translation";
 import { moderateGeneratedDialogues } from "../../middleware/content-safety";
+import * as jobService from "../../jobs/job.service";
 import { RatingModel } from "../ratings/rating.model";
 import { CommentModel } from "../comments/comment.model";
 import { ComicModel } from "./comic.model";
@@ -29,6 +30,50 @@ const DEFAULT_IMAGE_UPLOAD_CONCURRENCY = 6;
 
 const publicListCache = new Map<string, { expiresAt: number; payload: any }>();
 let topRatedCache: { expiresAt: number; payload: any } | null = null;
+
+/**
+ * Creates a generation job for this request, honouring an Idempotency-Key
+ * header when the client sends one. Never throws: a ledger failure must not
+ * cost the user a story they already paid to generate.
+ */
+async function openGenerationJob(req: AuthRequest, totalPanels: number): Promise<string | null> {
+  if (!req.userId) return null;
+
+  try {
+    const headerKey = req.header("Idempotency-Key");
+    const created = await jobService.createJob({
+      userId: req.userId,
+      comicId: typeof req.body?.comicId === "string" ? req.body.comicId : null,
+      draftId: typeof req.body?.draftId === "string" ? req.body.draftId : null,
+      totalPanels,
+      idempotencyKey: headerKey && headerKey.trim() ? headerKey.trim() : null,
+    });
+    return created?.job.id ?? null;
+  } catch (err) {
+    console.error("[jobs] Could not open generation job:", err);
+    return null;
+  }
+}
+
+/**
+ * Mirrors a finished panel into the ledger and closes the job out once the
+ * last panel lands. Best-effort for the same reason as openGenerationJob.
+ */
+async function recordPanelInLedger(
+  jobId: unknown,
+  panelIndex: number,
+  result: { status: "succeeded" | "failed"; imageUrl?: string | null; error?: string | null },
+): Promise<void> {
+  if (typeof jobId !== "string" || !jobId) return;
+
+  try {
+    await jobService.markRunning(jobId);
+    await jobService.recordPanelResult(jobId, panelIndex, result);
+    await jobService.finalizeIfComplete(jobId);
+  } catch (err) {
+    console.error(`[jobs] Could not record panel ${panelIndex} for job ${jobId}:`, err);
+  }
+}
 
 function getPositiveIntegerEnv(name: string, fallback: number): number {
   const rawValue = process.env[name];
@@ -145,10 +190,16 @@ export async function generateStoryHandler(req: AuthRequest, res: Response) {
       }
     } catch (_) { /* best-effort post-gen check */ }
 
+    // Open a ledger entry for the panel rendering that follows. Bookkeeping
+    // only — the client still drives generation today. A null jobId simply
+    // means the ledger is disabled, and the client carries on without it.
+    const jobId = await openGenerationJob(req, panels.length);
+
     return res.status(200).json({
       message: "Story generated successfully",
       panels,
       characterSheet: storyResult.characterSheet,
+      ...(jobId ? { jobId } : {}),
       // Let the client know the text was translated
       ...(wasArabic ? { translatedFrom: "ar" } : {}),
     });
@@ -452,6 +503,11 @@ export async function generateSingleImage(req: AuthRequest, res: Response) {
       }
     }
 
+    await recordPanelInLedger(req.body?.jobId, panelIndex, {
+      status: "succeeded",
+      imageUrl: finalUrl,
+    });
+
     return res.status(200).json({
       imageUrl: finalUrl,
       meta: result.meta,
@@ -460,6 +516,15 @@ export async function generateSingleImage(req: AuthRequest, res: Response) {
     console.error("Image generate error:", error);
     const message =
       error.message || "Failed to generate image. Please try again.";
+
+    const failedIndex = req.body?.panelIndex;
+    if (typeof failedIndex === "number") {
+      await recordPanelInLedger(req.body?.jobId, failedIndex, {
+        status: "failed",
+        error: message,
+      });
+    }
+
     return res.status(500).json({ message });
   }
 }
