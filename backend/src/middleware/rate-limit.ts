@@ -30,4 +30,17 @@ export const aiLimiter = createLimiter({
   message: { message: "AI generation limit reached. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  /**
+   * Key on the authenticated user rather than the IP. Generation costs money
+   * per user, and the default IP key both lets one account bypass the limit
+   * from several networks and lets several users behind one NAT — a campus,
+   * an office, a mobile carrier — exhaust each other's quota.
+   *
+   * Falls back to the IP for unauthenticated callers, which the auth
+   * middleware rejects anyway.
+   */
+  keyGenerator: (req: Request) => {
+    const userId = (req as Request & { userId?: string }).userId;
+    return userId ? `user:${userId}` : (req.ip ?? "unknown");
+  },
 });

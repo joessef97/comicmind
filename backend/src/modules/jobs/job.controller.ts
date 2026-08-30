@@ -91,6 +91,31 @@ export async function createGenerationJob(req: AuthRequest, res: Response) {
   }
 }
 
+/**
+ * GET /api/jobs/active — the caller's unfinished job, if any.
+ *
+ * This is what makes a reload harmless: the client asks whether work is still
+ * in flight and re-attaches instead of starting over.
+ */
+export async function getActiveGenerationJob(req: AuthRequest, res: Response) {
+  const comicId = typeof req.query.comicId === "string" ? req.query.comicId : null;
+  const draftId = typeof req.query.draftId === "string" ? req.query.draftId : null;
+
+  const job = await jobService.findActiveJob(req.userId!, { comicId, draftId });
+  if (!job) return res.status(200).json({ job: null });
+
+  return res.status(200).json({
+    job: {
+      id: job.id,
+      status: job.status,
+      totalPanels: job.totalPanels,
+      completedPanels: job.completedPanels,
+      comicId: job.comicId,
+      draftId: job.draftId,
+    },
+  });
+}
+
 /** GET /api/jobs/:id — current state plus per-panel detail. */
 export async function getGenerationJob(req: AuthRequest, res: Response) {
   const jobId = String(req.params.id);

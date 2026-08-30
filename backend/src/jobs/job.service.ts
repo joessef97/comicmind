@@ -6,7 +6,7 @@
  * branching. Bookkeeping must never be the reason a comic fails to generate.
  */
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import {
   generationJobPanels,
@@ -123,6 +123,35 @@ export async function findByIdempotencyKey(
         eq(generationJobs.idempotencyKey, idempotencyKey),
       ),
     )
+    .limit(1);
+
+  return job ?? null;
+}
+
+/**
+ * The user's most recent unfinished job, so a client returning after a reload
+ * can re-attach to work that carried on without it.
+ */
+export async function findActiveJob(
+  userId: string,
+  scope: { comicId?: string | null; draftId?: string | null } = {},
+): Promise<GenerationJob | null> {
+  const db = getDb();
+  if (!db) return null;
+
+  const filters = [
+    eq(generationJobs.userId, userId),
+    inArray(generationJobs.status, ["queued", "running"]),
+  ];
+
+  if (scope.comicId) filters.push(eq(generationJobs.comicId, scope.comicId));
+  if (scope.draftId) filters.push(eq(generationJobs.draftId, scope.draftId));
+
+  const [job] = await db
+    .select()
+    .from(generationJobs)
+    .where(and(...filters))
+    .orderBy(desc(generationJobs.createdAt))
     .limit(1);
 
   return job ?? null;
