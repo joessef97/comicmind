@@ -4,6 +4,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import userRoutes from "./modules/users/user.routes";
 import { comicRouter, imageRouter } from "./modules/comics/comic.routes";
 import draftRoutes from "./modules/drafts/draft.routes";
+import jobRoutes from "./modules/jobs/job.routes";
 import ratingRoutes from "./modules/ratings/rating.routes";
 import { comicCommentRouter, commentDeleteRouter } from "./modules/comments/comment.routes";
 import { getUploadsRoot, getStorageProviderName } from "./services/image-storage";
@@ -108,6 +109,7 @@ app.use("/api/comics", ratingRoutes);
 app.use("/api/comics", comicCommentRouter);
 app.use("/api/comments", commentDeleteRouter);
 app.use("/api/drafts", draftRoutes);
+app.use("/api/jobs", jobRoutes);
 app.use("/api/images", imageRouter);
 
 export { app };
