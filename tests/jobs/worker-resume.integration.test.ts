@@ -110,20 +110,25 @@ describe.skipIf(!hasInfra)("worker restart", () => {
       Array.from({ length: total }, (_, i) => panelData(ledgerJobId, i)),
     );
 
-    // First worker renders a couple of panels, then shuts down the way
-    // `docker compose stop worker` does: close() stops fetching new jobs and
-    // waits for in-flight ones, so the rest stay queued in Redis.
+    // First worker renders exactly two panels, then shuts down the way
+    // `docker compose stop worker` does. Pausing from inside the processor
+    // rather than waiting from outside makes the cutoff deterministic: on a
+    // fast runner the whole job set is drained well inside a poll interval.
+    const stopAfter = 2;
     let handled = 0;
-    const first = startWorker(async (job) => {
+    let first: Worker<PanelJobData>;
+
+    first = startWorker(async (job) => {
       handled += 1;
       await processPanel(job);
+      if (handled >= stopAfter) await first.pause();
     });
 
-    await waitFor(async () => handled >= 2);
+    await waitFor(async () => handled >= stopAfter);
     await first.close();
 
     const midway = await getJob(ledgerJobId);
-    expect(midway!.completedPanels).toBeGreaterThanOrEqual(2);
+    expect(midway!.completedPanels).toBe(stopAfter);
     // The point of the test: work was left behind, not silently dropped.
     expect(midway!.completedPanels).toBeLessThan(total);
     expect(midway!.status).toBe("running");
