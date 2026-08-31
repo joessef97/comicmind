@@ -8,6 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ComicPanel } from "@/components/editor/comic-panel";
 import { ComicBookReader } from "@/components/reader/comic-book-reader";
+import {
+  startGenerationJob,
+  watchGenerationJob,
+  type JobSnapshot,
+} from "@/hooks/use-generation-job";
 import { 
   ChevronRight, 
   BookOpen, 
@@ -84,6 +89,8 @@ export default function Editor() {
   const [premise, setPremise] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("anime");
   const [panels, setPanels] = useState<Panel[]>([]);
+  /** Tears down the SSE subscription when the editor unmounts. */
+  const unwatchRef = useRef<(() => void) | null>(null);
   const [selectedPanel, setSelectedPanel] = useState<number>(0);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
@@ -122,6 +129,15 @@ export default function Editor() {
   useEffect(() => {
     draftIdRef.current = draftId;
   }, [draftId]);
+
+  // Close any open progress stream on unmount. The job itself keeps running —
+  // this only drops our view of it.
+  useEffect(() => {
+    return () => {
+      unwatchRef.current?.();
+      unwatchRef.current = null;
+    };
+  }, []);
 
   // ── Load existing draft or comic on mount ───────────────────────────
   useEffect(() => {
@@ -256,6 +272,90 @@ export default function Editor() {
   };
 
   // ── Generate comic with auto-draft ──────────────────────────────────
+  /**
+   * Watches a queued job to completion, mapping ledger snapshots onto panel
+   * state. Resolves when the job reaches a terminal status.
+   *
+   * The browser is a spectator here: navigating away does not stop the work,
+   * and returning re-attaches through findActiveJob.
+   */
+  const watchQueuedGeneration = (
+    jobId: string,
+    initialPanels: Panel[],
+    csText: string,
+    charRefUrlCaptured: string,
+  ): Promise<void> =>
+    new Promise((resolve) => {
+      const token = localStorage.getItem("token") || "";
+      const latest = [...initialPanels];
+
+      const applySnapshot = (snapshot: JobSnapshot) => {
+        for (const p of snapshot.panels) {
+          const target = latest[p.panelNumber];
+          if (!target) continue;
+
+          latest[p.panelNumber] = {
+            ...target,
+            imageUrl: p.imageUrl ?? target.imageUrl,
+            error: p.status === "failed" ? (p.error ?? "Generation failed") : undefined,
+          };
+          setPanelLoading((prev) => ({ ...prev, [target.number]: p.status === "running" }));
+        }
+
+        setPanels([...latest]);
+        setPanelProgress({ done: snapshot.completedPanels, total: snapshot.totalPanels });
+        setGenerationProgress(
+          `Generating images ${snapshot.completedPanels} of ${snapshot.totalPanels}…`,
+        );
+      };
+
+      const finish = async (snapshot: JobSnapshot) => {
+        applySnapshot(snapshot);
+        setPanelLoading({});
+
+        const failed = snapshot.panels.filter((p) => p.status === "failed").length;
+        await saveDraft({
+          panels: latest,
+          characterSheet: csText,
+          characterRefUrl: charRefUrlCaptured,
+          status: failed === snapshot.totalPanels ? "FAILED" : "COMPLETED",
+        } as any);
+
+        setIsGeneratingImages(false);
+        setGenerationProgress("");
+
+        if (failed === 0) {
+          toast({ title: "Comic generated!", description: "Your comic panels are ready." });
+        } else {
+          // Partial success: the rest of the comic is intact and the failed
+          // panels can be retried individually.
+          toast({
+            title: `${snapshot.totalPanels - failed} of ${snapshot.totalPanels} panels ready`,
+            description: `${failed} panel${failed === 1 ? "" : "s"} failed. You can retry them individually.`,
+            variant: "destructive",
+          });
+        }
+
+        resolve();
+      };
+
+      unwatchRef.current = watchGenerationJob(jobId, token, {
+        onProgress: applySnapshot,
+        onDone: (snapshot) => void finish(snapshot),
+        onError: (message) => {
+          setIsGeneratingImages(false);
+          setGenerationProgress("");
+          // The job keeps running server-side; only our view of it dropped.
+          toast({
+            title: "Lost connection",
+            description: `${message} Generation is still running — reopen this draft to see the result.`,
+            variant: "destructive",
+          });
+          resolve();
+        },
+      });
+    });
+
   const handleGenerate = async (options?: { reuseExistingText?: boolean }) => {
     // Guard: prevent duplicate submissions (double-click / race)
     if (isSubmittingRef.current) return;
@@ -306,6 +406,8 @@ export default function Editor() {
     try {
       let storyPanels: Panel[] = [];
       let csText = characterSheet || "";
+      // Local capture: state set below is not readable again in this same run.
+      let jobIdCaptured: string | null = null;
 
       if (shouldReuseText) {
         setIsGeneratingStory(false);
@@ -323,6 +425,9 @@ export default function Editor() {
         const storyData = await storyRes.json();
         storyPanels = storyData.panels;
         setPanels(storyPanels);
+
+        // Present only when the server-side generation ledger is enabled.
+        jobIdCaptured = storyData.jobId ?? null;
 
         // Store the character sheet for image consistency
         csText = storyData.characterSheet?.description || "";
@@ -405,6 +510,28 @@ export default function Editor() {
       // Switch to "result" step early so users see panels appearing one-by-one
       setStep("result");
 
+      // Preferred path: hand rendering to the server-side queue. Returns null
+      // when the deployment cannot queue, in which case we fall through to the
+      // client-driven loop below.
+      const queuedJobId = await startGenerationJob(
+        {
+          panels: storyPanels.map((p) => ({ description: p.description })),
+          style: selectedStyle,
+          comicId: activeComicId,
+          draftId: draftId ?? null,
+          characterSheet: csText || undefined,
+          characterRefUrl: charRefUrlCaptured || undefined,
+        },
+        // Stable across retries of this same submit, so a double click or a
+        // dropped response attaches to the original job instead of paying twice.
+        jobIdCaptured || `${draftId ?? "draft"}-${storyPanels.length}-${title}`,
+      );
+
+      if (queuedJobId) {
+        await watchQueuedGeneration(queuedJobId, storyPanels, csText, charRefUrlCaptured);
+        return;
+      }
+
       const panelsWithImages = [...storyPanels] as Panel[];
 
       // Generate panels in parallel batches of 2 to cut wait time ~in half.
@@ -428,6 +555,7 @@ export default function Editor() {
             const panel = panelsWithImages[i];
             const imgRes = await apiRequest("POST", "/api/images/generate", {
               comicId: activeComicId,
+              jobId: jobIdCaptured || undefined,
               panelIndex: i,
               prompt: panel.description,
               style: selectedStyle,

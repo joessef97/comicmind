@@ -11,6 +11,22 @@ export interface AuthRequest extends Request {
   userId?: string;
 }
 
+/**
+ * Same check as authenticateToken, but also accepts `?token=`.
+ *
+ * Reserved for Server-Sent Events: the browser's EventSource API cannot set
+ * request headers, so a bearer token has nowhere else to travel. Do not reuse
+ * this on ordinary routes — tokens in query strings end up in access logs and
+ * browser history, which is a cost worth paying only where there is no
+ * alternative.
+ */
+export function authenticateStreamToken(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.headers.authorization && typeof req.query.token === "string") {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  return authenticateToken(req, res, next);
+}
+
 export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(" ")[1];
