@@ -38,8 +38,10 @@ vi.mock("../../backend/src/jobs/job.service", () => ({
 }));
 
 vi.mock("../../backend/src/jobs/queue", () => ({
-  PANEL_QUEUE_NAME: "comic-panel-generation",
-  getRedisConnection: () => null,
+  isQueueEnabled: () => false,
+  claimNextPanel: async () => null,
+  releasePanel: async () => {},
+  retryDelayMs: () => 0,
 }));
 
 const { renderPanel } = await import("../../backend/src/jobs/panel.worker");
@@ -57,6 +59,7 @@ function makeJob(overrides: { attemptsMade?: number; attempts?: number } = {}) {
     },
     attemptsMade: overrides.attemptsMade ?? 0,
     opts: { attempts: overrides.attempts ?? 3 },
+    claimToken: "claim-1",
   } as any;
 }
 
@@ -86,7 +89,7 @@ describe("panel worker", () => {
   it("does not record a failure while retries remain", async () => {
     mocks.generateImage.mockRejectedValue(new Error("rate limited"));
 
-    // Attempt 1 of 3 — BullMQ will retry, so the panel is not lost yet.
+    // Attempt 1 of 3 — the worker will retry, so the panel is not lost yet.
     await expect(renderPanel(makeJob({ attemptsMade: 0, attempts: 3 }))).rejects.toThrow(
       "rate limited",
     );
@@ -111,7 +114,7 @@ describe("panel worker", () => {
     expect(mocks.finalizeIfComplete).toHaveBeenCalledWith("job-1");
   });
 
-  it("rethrows so BullMQ owns the retry decision", async () => {
+  it("rethrows so the worker loop owns the retry decision", async () => {
     mocks.generateImage.mockRejectedValue(new Error("upstream 500"));
     await expect(renderPanel(makeJob())).rejects.toThrow("upstream 500");
   });

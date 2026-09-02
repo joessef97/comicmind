@@ -11,37 +11,23 @@ jobs:
     name: Type check and tests
     runs-on: ubuntu-latest
 
-    # The generation ledger is real Postgres, so the ledger integration tests
-    # run against a real database here. Without DATABASE_URL they skip, which
-    # is what keeps `npm test` working on a laptop with no Postgres installed.
+    # The integration tests exercise real MongoDB semantics — the partial
+    # unique index, the atomic panel/counter update, and the atomic claim the
+    # queue is built on — so CI gives them a real database. They skip when no
+    # mongod answers, which is what keeps `npm test` working offline.
     services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: comicmind
-          POSTGRES_PASSWORD: comicmind
-          POSTGRES_DB: comicmind_test
+      mongo:
+        image: mongo:7
         ports:
-          - 5432:5432
+          - 27017:27017
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     env:
-      DATABASE_URL: postgres://comicmind:comicmind@localhost:5432/comicmind_test
-      REDIS_URL: redis://localhost:6379
+      MONGODB_URI: mongodb://localhost:27017/comicmind_test
 
     steps:
       - uses: actions/checkout@v4
@@ -56,9 +42,6 @@ jobs:
 
       - name: Type check
         run: npm run check
-
-      - name: Apply migrations
-        run: npm run db:migrate
 
       - name: Run tests
         run: npm test

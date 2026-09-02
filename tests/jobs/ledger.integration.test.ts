@@ -1,40 +1,41 @@
 /**
- * Ledger integration tests — these exercise real Postgres semantics that a
- * mock cannot verify: the partial unique index, transactional counter updates,
- * and cascade deletes.
+ * Ledger integration tests — these exercise real MongoDB semantics that a
+ * mock cannot verify: the partial unique index behind the idempotency
+ * guarantee, and the single-document update that keeps `completedPanels` in
+ * step with the panels it counts.
  *
- * Skipped automatically when DATABASE_URL is unset, so `npm test` still runs
- * offline. CI provides a postgres service container, so they always run there.
+ * Skipped automatically when no mongod answers, so `npm test` still runs
+ * offline. CI provides a mongo service container, so they always run there.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
-import { closeDb, getDb } from "../../backend/src/db";
-import { generationJobPanels, generationJobs } from "../../backend/src/db/schema";
+import { GenerationJobModel } from "../../backend/src/jobs/job.model";
+import { connectTestMongo, disconnectTestMongo, dropTestMongo } from "../helpers/mongo";
 import {
   createJob,
   finalizeJob,
+  getJob,
   getJobPanels,
   markRunning,
   recordPanelResult,
 } from "../../backend/src/jobs/job.service";
 
-const hasDb = Boolean(process.env.DATABASE_URL);
+const hasDb = await connectTestMongo("comicmind-test-ledger");
 const userId = `test-user-${Date.now()}`;
 
 describe.skipIf(!hasDb)("generation ledger", () => {
   beforeAll(async () => {
-    const db = getDb();
-    if (!db) throw new Error("expected a database connection");
+    // The idempotency guarantee is an index, so it has to exist before the
+    // race test can prove anything.
+    await GenerationJobModel.syncIndexes();
   });
 
   afterAll(async () => {
-    const db = getDb();
-    if (db) await db.delete(generationJobs).where(eq(generationJobs.userId, userId));
-    await closeDb();
+    await dropTestMongo();
+    await disconnectTestMongo();
   });
 
-  it("creates a job with one row per panel", async () => {
+  it("creates a job with one entry per panel", async () => {
     const created = await createJob({ userId, totalPanels: 4 });
     expect(created).not.toBeNull();
     expect(created!.reused).toBe(false);
@@ -57,7 +58,7 @@ describe.skipIf(!hasDb)("generation ledger", () => {
     expect(second!.reused).toBe(true);
     expect(second!.job.id).toBe(first!.job.id);
 
-    // The duplicate must not have created a second set of panel rows.
+    // The duplicate must not have created a second set of panels.
     const panels = await getJobPanels(first!.job.id);
     expect(panels).toHaveLength(3);
   });
@@ -73,6 +74,15 @@ describe.skipIf(!hasDb)("generation ledger", () => {
 
     const ids = new Set(results.map((r) => r!.job.id));
     expect(ids.size).toBe(1);
+    expect(await GenerationJobModel.countDocuments({ userId, idempotencyKey: key })).toBe(1);
+  });
+
+  it("lets many jobs exist without a key", async () => {
+    // The unique index is partial; without that, the second of these would
+    // collide with the first on (userId, null).
+    const a = await createJob({ userId, totalPanels: 1 });
+    const b = await createJob({ userId, totalPanels: 1 });
+    expect(a!.job.id).not.toBe(b!.job.id);
   });
 
   it("counts a panel once even if its result is delivered twice", async () => {
@@ -83,13 +93,29 @@ describe.skipIf(!hasDb)("generation ledger", () => {
     await recordPanelResult(jobId, 0, { status: "succeeded", imageUrl: "https://x/0.png" });
     await recordPanelResult(jobId, 0, { status: "succeeded", imageUrl: "https://x/0.png" });
 
-    const db = getDb()!;
-    const [job] = await db.select().from(generationJobs).where(eq(generationJobs.id, jobId));
-    expect(job.completedPanels).toBe(1);
+    const job = await getJob(jobId);
+    expect(job!.completedPanels).toBe(1);
 
     // The attempt counter still moves — redelivery is visible in the audit trail.
     const panels = await getJobPanels(jobId);
     expect(panels[0].attempts).toBe(2);
+  });
+
+  it("counts each panel once under concurrent delivery", async () => {
+    const created = await createJob({ userId, totalPanels: 4 });
+    const jobId = created!.job.id;
+    await markRunning(jobId);
+
+    // Four workers landing at the same instant: the counter is advanced by the
+    // same write that claims the panel, so none of them can double-count.
+    await Promise.all(
+      [0, 1, 2, 3].map((n) =>
+        recordPanelResult(jobId, n, { status: "succeeded", imageUrl: `https://x/${n}.png` }),
+      ),
+    );
+
+    const job = await getJob(jobId);
+    expect(job!.completedPanels).toBe(4);
   });
 
   it("ends partial when some panels fail and some succeed", async () => {
@@ -144,6 +170,21 @@ describe.skipIf(!hasDb)("generation ledger", () => {
     expect(second!.finishedAt?.getTime()).toBe(first!.finishedAt?.getTime());
   });
 
+  it("settles on one outcome when finalized concurrently", async () => {
+    const created = await createJob({ userId, totalPanels: 2 });
+    const jobId = created!.job.id;
+    await markRunning(jobId);
+    await recordPanelResult(jobId, 0, { status: "succeeded", imageUrl: "https://x/0.png" });
+    await recordPanelResult(jobId, 1, { status: "succeeded", imageUrl: "https://x/1.png" });
+
+    // The compare-and-swap on status means the loser reports the winner's
+    // result rather than writing a second finishedAt.
+    const [a, b] = await Promise.all([finalizeJob(jobId), finalizeJob(jobId)]);
+    expect(a!.status).toBe("succeeded");
+    expect(b!.status).toBe("succeeded");
+    expect(a!.finishedAt?.getTime()).toBe(b!.finishedAt?.getTime());
+  });
+
   it("only marks a queued job as running", async () => {
     const created = await createJob({ userId, totalPanels: 1 });
     const jobId = created!.job.id;
@@ -153,17 +194,14 @@ describe.skipIf(!hasDb)("generation ledger", () => {
     expect(await markRunning(jobId)).toBeNull();
   });
 
-  it("cascades panel rows when a job is deleted", async () => {
+  it("removes a job's panels with the job", async () => {
+    // Panels are embedded, so there are no orphans to clean up separately.
     const created = await createJob({ userId, totalPanels: 2 });
     const jobId = created!.job.id;
 
-    const db = getDb()!;
-    await db.delete(generationJobs).where(eq(generationJobs.id, jobId));
+    await GenerationJobModel.deleteOne({ _id: jobId });
 
-    const panels = await db
-      .select()
-      .from(generationJobPanels)
-      .where(eq(generationJobPanels.jobId, jobId));
-    expect(panels).toHaveLength(0);
+    expect(await getJob(jobId)).toBeNull();
+    expect(await getJobPanels(jobId)).toEqual([]);
   });
 });

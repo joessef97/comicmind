@@ -7,18 +7,13 @@
  * via WORKER_INLINE instead.
  */
 
+import mongoose from "mongoose";
 import { connectDB } from "./config/db";
 import { startPanelWorker } from "./jobs/panel.worker";
-import { closeQueue, isQueueEnabled } from "./jobs/queue";
-import { closeDb } from "./db";
 
 async function main() {
-  if (!isQueueEnabled()) {
-    console.error("REDIS_URL is not set — a worker has nothing to consume.");
-    process.exit(1);
-  }
-
-  // The worker writes panel results back to comic documents.
+  // The queue lives in Mongo alongside the comic content, so the connection
+  // has to be up before the worker can claim anything.
   await connectDB();
 
   const worker = startPanelWorker();
@@ -32,8 +27,7 @@ async function main() {
     // close() waits for active jobs; anything still queued is picked up by the
     // next worker to start, which is what makes a restart mid-run safe.
     await worker.close();
-    await closeQueue();
-    await closeDb();
+    await mongoose.disconnect();
     process.exit(0);
   };
 

@@ -1,8 +1,8 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../auth/auth.middleware";
 import * as jobService from "../../jobs/job.service";
+import { isLedgerEnabled } from "../../jobs/job.service";
 import { enqueuePanels, isQueueEnabled, type PanelJobData } from "../../jobs/queue";
-import { isLedgerEnabled } from "../../db";
 
 /** Queued generation needs both halves; without either we fall back to the sync path. */
 export function isQueuedGenerationAvailable(): boolean {

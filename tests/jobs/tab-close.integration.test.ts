@@ -3,26 +3,25 @@
  *
  * The claim: a client that disappears mid-generation does not cancel the work,
  * and a client that comes back sees the finished comic. Everything here is
- * real — the Express app over real HTTP, a real SSE connection, a real BullMQ
- * worker running the real `renderPanel`, real Redis, real Postgres. Only the
+ * real — the Express app over real HTTP, a real SSE connection, a real
+ * worker claiming and running the real `renderPanel`, real Mongo. Only the
  * OpenAI call is stubbed, because rendering an actual image proves nothing
  * about durability and costs money.
  *
  * "Closing the tab" is a socket destroy on the live SSE request, which is what
  * a browser does when its tab goes away.
  *
- * Needs DATABASE_URL and REDIS_URL; skips without them, runs in CI.
+ * Needs a reachable Mongo; skips without one, runs in CI.
  */
 
 import http from "http";
 import type { AddressInfo } from "net";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
 
-process.env.BULLMQ_PREFIX = "test-tabclose";
 process.env.GENERATION_MODE = "queue";
 
-const hasInfra = Boolean(process.env.DATABASE_URL && process.env.REDIS_URL);
+const { connectTestMongo, disconnectTestMongo, dropTestMongo } = await import("../helpers/mongo");
+const hasInfra = await connectTestMongo("comicmind-test-tabclose");
 
 /** Each panel takes a beat, so there is a real window in which to vanish. */
 const RENDER_MS = 300;
@@ -50,9 +49,7 @@ vi.mock("../../backend/src/services/image-storage", () => ({
 
 const { app } = await import("../../backend/src/app");
 const { startPanelWorker } = await import("../../backend/src/jobs/panel.worker");
-const { closeQueue, getPanelQueue } = await import("../../backend/src/jobs/queue");
-const { getDb, closeDb } = await import("../../backend/src/db");
-const { generationJobs } = await import("../../backend/src/db/schema");
+const { GenerationJobModel } = await import("../../backend/src/jobs/job.model");
 const { makeTestToken } = await import("../helpers/auth");
 
 const userId = `tabclose-${Date.now()}`;
@@ -102,10 +99,10 @@ async function getJson(path: string) {
 
 describe.skipIf(!hasInfra)("tab close during generation", () => {
   beforeAll(async () => {
-    const queue = getPanelQueue();
-    if (queue) await queue.obliterate({ force: true });
+    await GenerationJobModel.deleteMany({});
 
-    worker = startPanelWorker();
+    // A short poll keeps the suite quick; production defaults to 500ms.
+    worker = startPanelWorker({ pollIntervalMs: 25 });
     server = app.listen(0);
     await new Promise((r) => server.once("listening", r));
     baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -113,14 +110,8 @@ describe.skipIf(!hasInfra)("tab close during generation", () => {
 
   afterAll(async () => {
     await worker?.close();
-    const queue = getPanelQueue();
-    if (queue) await queue.obliterate({ force: true });
-
-    const db = getDb();
-    if (db) await db.delete(generationJobs).where(eq(generationJobs.userId, userId));
-
-    await closeQueue();
-    await closeDb();
+    await dropTestMongo();
+    await disconnectTestMongo();
     await new Promise((r) => server.close(r));
   });
 

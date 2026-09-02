@@ -9,6 +9,18 @@ vi.mock("../../backend/src/services/ai.service", () => testMocks.aiService);
 vi.mock("../../backend/src/services/image-storage", () => testMocks.imageStorage);
 vi.mock("../../backend/src/modules/auth/auth.model", () => ({ UserModel: testMocks.userModel }));
 
+/**
+ * The ledger reports itself available whenever Mongo is connected, and these
+ * tests deliberately run with no connection. Overriding just that one function
+ * lets a test say "pretend the ledger is up" without standing up a database
+ * the rest of the suite does not need.
+ */
+let ledgerEnabled = false;
+vi.mock("../../backend/src/jobs/job.model", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../backend/src/jobs/job.model")>();
+  return { ...actual, isLedgerEnabled: () => ledgerEnabled };
+});
+
 describe("generation job endpoints", () => {
   let app: Awaited<ReturnType<typeof loadTestApp>>;
   const token = makeTestToken("user-1");
@@ -19,8 +31,7 @@ describe("generation job endpoints", () => {
 
   beforeEach(() => {
     delete process.env.GENERATION_MODE;
-    delete process.env.REDIS_URL;
-    delete process.env.DATABASE_URL;
+    ledgerEnabled = false;
   });
 
   it("rejects unauthenticated callers", async () => {
@@ -29,8 +40,8 @@ describe("generation job endpoints", () => {
   });
 
   it("reports sync mode when queued generation is not enabled", async () => {
-    // No REDIS_URL and no DATABASE_URL: the deployment cannot queue, and says
-    // so rather than accepting work it will never run.
+    // GENERATION_MODE is unset: the deployment does not queue, and says so
+    // rather than accepting work it will never run.
     const response = await request(app)
       .post("/api/jobs/generate")
       .set("Authorization", `Bearer ${token}`)
@@ -43,11 +54,11 @@ describe("generation job endpoints", () => {
     expect(response.body.mode).toBe("sync");
   });
 
-  it("does not queue when only half the infrastructure is present", async () => {
-    // Redis without the ledger would leave rendered panels with nowhere to
-    // record their outcome, so this must not be treated as queue-capable.
+  it("does not queue without a database connection", async () => {
+    // The queue lives in Mongo, so asking for queued generation with no
+    // connection would leave rendered panels with nowhere to record their
+    // outcome. It must not be treated as queue-capable.
     process.env.GENERATION_MODE = "queue";
-    process.env.REDIS_URL = "redis://localhost:6379";
 
     const response = await request(app)
       .post("/api/jobs/generate")
@@ -68,7 +79,15 @@ describe("generation job endpoints", () => {
 
   it("404s an unknown job rather than revealing whether it exists", async () => {
     const response = await request(app)
-      .get("/api/jobs/6f1c9f0e-6a1a-4a3e-9f0e-2b7c1d8e5a44")
+      .get("/api/jobs/6f1c9f0e6a1a4a3e9f0e2b7c")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(404);
+  });
+
+  it("404s a malformed job id rather than erroring", async () => {
+    const response = await request(app)
+      .get("/api/jobs/not-a-real-id")
       .set("Authorization", `Bearer ${token}`);
 
     expect(response.status).toBe(404);
@@ -76,8 +95,7 @@ describe("generation job endpoints", () => {
 
   it("requires panels and a style", async () => {
     process.env.GENERATION_MODE = "queue";
-    process.env.REDIS_URL = "redis://localhost:6379";
-    process.env.DATABASE_URL = "postgres://localhost:5432/none";
+    ledgerEnabled = true;
 
     const missingPanels = await request(app)
       .post("/api/jobs/generate")

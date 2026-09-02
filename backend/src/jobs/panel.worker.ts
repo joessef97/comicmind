@@ -4,10 +4,14 @@
  * Deliberately thin: it owns *when* and *how often* a panel is rendered, not
  * how. Image generation and persistence are the same functions the
  * synchronous path uses, so the two paths cannot drift apart.
+ *
+ * Where a broker-backed worker is pushed work, this one polls: it claims a
+ * panel, renders it, and asks for another. Retry lives here too — the queue
+ * has no supervisor of its own, so a panel with attempts left is released
+ * back with a backoff, and only the last attempt is recorded as a failure.
  */
 
 import crypto from "crypto";
-import { Worker, type ConnectionOptions, type Job } from "bullmq";
 import { getImageProvider } from "../services/ai.service";
 import {
   isPersistedUrl,
@@ -17,21 +21,24 @@ import {
 import { storage } from "../services/storage.service";
 import * as jobService from "./job.service";
 import {
-  PANEL_QUEUE_NAME,
-  getRedisConnection,
-  queuePrefix,
-  type PanelJobData,
+  claimNextPanel,
+  isQueueEnabled,
+  releasePanel,
+  retryDelayMs,
+  type PanelTask,
 } from "./queue";
 
 const DEFAULT_CONCURRENCY = 2;
+/** How long to wait after finding nothing before asking again. */
+const DEFAULT_POLL_INTERVAL_MS = 500;
 
 /**
- * Renders one panel and writes the result to Mongo (content) and Postgres
- * (ledger). Throwing propagates to BullMQ, which applies the configured
- * backoff and retries; only the final failed attempt is recorded as failed,
- * so the ledger reflects outcomes rather than every intermediate stumble.
+ * Renders one panel and writes the result to Mongo: the comic document for
+ * content, the job ledger for bookkeeping. Throwing hands the retry decision
+ * to the caller; only the final failed attempt is recorded as failed, so the
+ * ledger reflects outcomes rather than every intermediate stumble.
  */
-export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: string }> {
+export async function renderPanel(job: PanelTask): Promise<{ imageUrl: string }> {
   const { jobId, userId, comicId, panelIndex, prompt, style } = job.data;
 
   await jobService.markRunning(jobId);
@@ -142,27 +149,97 @@ async function writePanelToComic(
   }
 }
 
+export interface PanelWorker {
+  /** Stops claiming and waits for panels already in flight. */
+  close(): Promise<void>;
+  /** Panels currently being rendered by this worker. */
+  activeCount(): number;
+}
+
+export interface PanelWorkerOptions {
+  concurrency?: number;
+  pollIntervalMs?: number;
+  /** Injectable so tests can drive the loop without rendering images. */
+  processor?: (task: PanelTask) => Promise<unknown>;
+}
+
 /**
- * Starts the worker. Returns null when Redis is unavailable so the caller can
- * carry on without a queue.
+ * Starts the polling loop. Returns null when the queue is unavailable so the
+ * caller can carry on without one.
  */
-export function startPanelWorker(): Worker<PanelJobData> | null {
-  const connection = getRedisConnection();
-  if (!connection) return null;
+export function startPanelWorker(options: PanelWorkerOptions = {}): PanelWorker | null {
+  if (!isQueueEnabled()) {
+    console.log("[worker] No database connection — queued generation disabled");
+    return null;
+  }
 
   const concurrency =
-    Number.parseInt(process.env.PANEL_WORKER_CONCURRENCY || "", 10) || DEFAULT_CONCURRENCY;
+    options.concurrency ??
+    (Number.parseInt(process.env.PANEL_WORKER_CONCURRENCY || "", 10) || DEFAULT_CONCURRENCY);
+  const pollIntervalMs =
+    options.pollIntervalMs ??
+    (Number.parseInt(process.env.PANEL_WORKER_POLL_MS || "", 10) || DEFAULT_POLL_INTERVAL_MS);
+  const processor = options.processor ?? renderPanel;
 
-  const worker = new Worker<PanelJobData>(PANEL_QUEUE_NAME, renderPanel, {
-    connection: connection as unknown as ConnectionOptions,
-    prefix: queuePrefix(),
-    concurrency,
-  });
+  let running = true;
+  const active = new Set<Promise<void>>();
 
-  worker.on("failed", (job, err) => {
-    console.error(`[worker] Job ${job?.id} failed: ${err.message}`);
-  });
+  const handle = async (task: PanelTask) => {
+    try {
+      await processor(task);
+    } catch {
+      // renderPanel has already recorded a permanent failure if this was the
+      // last attempt; anything short of that goes back on the queue.
+      if (task.attemptsMade + 1 < task.opts.attempts) {
+        await releasePanel(task, retryDelayMs(task.attemptsMade + 1)).catch((releaseErr) => {
+          console.error("[worker] Could not release panel for retry:", releaseErr);
+        });
+      }
+    }
+  };
 
-  console.log(`[worker] Panel worker started (concurrency ${concurrency})`);
-  return worker;
+  const loop = (async () => {
+    while (running) {
+      if (active.size >= concurrency) {
+        await Promise.race(active);
+        continue;
+      }
+
+      let task: PanelTask | null = null;
+      try {
+        task = await claimNextPanel();
+      } catch (err) {
+        console.error("[worker] Claim failed:", err);
+      }
+
+      if (!task) {
+        await sleep(pollIntervalMs);
+        continue;
+      }
+
+      const inFlight = handle(task).finally(() => {
+        active.delete(inFlight);
+      });
+      active.add(inFlight);
+    }
+  })();
+
+  console.log(
+    `[worker] Panel worker started (concurrency ${concurrency}, polling every ${pollIntervalMs}ms)`,
+  );
+
+  return {
+    async close() {
+      running = false;
+      await loop;
+      await Promise.allSettled([...active]);
+    },
+    activeCount() {
+      return active.size;
+    },
+  };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

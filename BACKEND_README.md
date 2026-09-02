@@ -12,7 +12,7 @@ Backend implementation for ComicMind: AI Comic Book Creator Webservice
 - ✅ Content safety filtering
 - ✅ Comic CRUD operations
 - ✅ User gallery 
-- ✅ In-memory storage (easily replaceable with PostgreSQL)
+- ✅ MongoDB-backed storage for comics, drafts, users and the generation job ledger
 
 ## Technology Stack
 
@@ -21,7 +21,7 @@ Backend implementation for ComicMind: AI Comic Book Creator Webservice
 - **OpenAI API** - Story and image generation
 - **JWT** - Authentication
 - **bcrypt** - Password hashing
-- **Drizzle ORM** - Database schema management
+- **MongoDB** + **Mongoose** - Comic content and the generation job ledger
 
 ## Setup
 
@@ -203,12 +203,12 @@ Each panel contains:
 
 ## Storage
 
-Currently uses in-memory storage (`MemStorage`).
+Everything persistent lives in MongoDB, reached through the single `MONGODB_URI` connection:
 
-To use PostgreSQL:
-1. Set `DATABASE_URL` in `.env`
-2. Run migrations: `npm run db:push`
-3. Implement `DBStorage` class in `backend/storage.ts`
+- Comic content, drafts, users, comments and ratings — `backend/src/modules/*/*.model.ts`
+- The generation job ledger — `backend/src/jobs/job.model.ts`
+
+Collections and indexes are created on first use, so there is no migration step.
 
 ## Security
 

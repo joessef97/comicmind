@@ -30,38 +30,45 @@ Rendering six panels takes minutes, so it does not belong on an HTTP request. Ge
 watches progress. Closing the tab does not cancel anything.
 
 ```
-POST /api/jobs/generate         →  generation_jobs row (Postgres, transactional)
-  + Idempotency-Key                 one BullMQ job per panel (Redis)
+POST /api/jobs/generate         →  generation_jobs document (Mongo, atomic)
+  + Idempotency-Key                 one unit of work per panel, on the panel itself
                                               ↓
-                                    worker: render → Cloudinary → Mongo (content)
-                                                   → ledger update (Postgres)
+                                    worker: claim → render → Cloudinary → Mongo (content)
+                                                          → ledger update (Mongo)
                                               ↓
 GET /api/jobs/:id/events (SSE)  ←   progress replayed on connect, then streamed
 ```
 
-**Postgres owns job state; MongoDB owns comic content.** The ledger needs transactions, uniqueness
-guarantees and an audit trail; panels are document-shaped and already work as documents. The two tables
-are `generation_jobs` and `generation_job_panels` (`backend/src/db/schema.ts`).
+**MongoDB owns both comic content and job state**, in separate collections. The ledger lives in
+`generation_jobs`, one document per generation with its panels embedded (`backend/src/jobs/job.model.ts`).
+Embedding is what makes the guarantees below cheap: every ledger mutation touches exactly one document,
+and single-document writes are atomic on any MongoDB deployment — no transactions, no replica set.
 
 What the design buys, and how each property is enforced:
 
 | Property | Mechanism |
 |---|---|
-| A double submit never renders twice | Partial unique index on `(user_id, idempotency_key)` — the loser of the insert race is served the winner's job |
-| Redelivery never double-counts | `UNIQUE (job_id, panel_number)`; the panel row and the parent counter update in one transaction |
+| A double submit never renders twice | Partial unique index on `(userId, idempotencyKey)` — the loser of the insert race is served the winner's job |
+| Redelivery never double-counts | The panel is claimed and `completedPanels` incremented by one update, guarded on the panel not already being `succeeded` |
 | One bad panel doesn't lose the comic | One queue job per panel; 3 attempts with exponential backoff, then the job settles as `partial` rather than `failed` |
 | Closing the tab doesn't cancel work | The worker is a separate process; `GET /api/jobs/active` re-attaches a returning client |
-| A restarted worker resumes | Queued panels stay in Redis; the ledger says which ones already finished |
+| A restarted worker resumes | Unclaimed panels are still on the job document; a claim left by a dead worker expires after `PANEL_VISIBILITY_TIMEOUT_MS` and is retried |
 | One user can't exhaust everyone's quota | `aiLimiter` keys on the authenticated user, not the IP |
 
-Both halves are optional. Without `DATABASE_URL` the ledger disables itself and every call returns null;
-without `REDIS_URL` there is no queue and the synchronous path runs instead. That is how the free-tier
-deployment runs today, and it means bookkeeping can never be the reason a comic fails to generate.
+**There is no broker.** The queue is the ledger: a panel carries its own payload and claim state, and a
+worker takes the next one with the same atomic update that marks it taken. That means one database and
+one connection string for the whole pipeline. Set `GENERATION_MODE=queue` to use it; leave it unset and
+the synchronous path runs instead, which is how the free-tier deployment runs today. Either way,
+bookkeeping can never be the reason a comic fails to generate.
+
+The trade against a broker is honest: workers poll rather than being pushed, so a panel starts within a
+poll interval (`PANEL_WORKER_POLL_MS`, 500ms by default) instead of instantly, and a panel abandoned by a
+crashed worker waits out the visibility timeout before anyone retries it.
 
 ### Running the real topology
 
 ```bash
-docker compose up          # postgres, redis, api, worker
+docker compose up          # mongo, api, worker
 ```
 
 To see the durability claim rather than take it on trust, start a comic and then:
@@ -71,11 +78,12 @@ docker compose stop worker     # mid-generation
 docker compose start worker    # queued panels resume where they left off
 ```
 
-Both durability claims are pinned by tests rather than left to a demo, and both run against real Redis
-and Postgres in CI:
+Both durability claims are pinned by tests rather than left to a demo, and both run against a real
+MongoDB in CI:
 
-- `tests/jobs/worker-resume.integration.test.ts` — two real BullMQ workers: the first renders part of a
-  job and shuts down, the second takes over the leftovers. Every panel is rendered exactly once.
+- `tests/jobs/worker-resume.integration.test.ts` — the first worker renders part of a job and shuts down,
+  a second takes over the leftovers, and a third case runs two workers at once. Every panel is rendered
+  exactly once in all of them.
 - `tests/jobs/tab-close.integration.test.ts` — the real Express app over real HTTP with a real worker.
   A live SSE connection is destroyed mid-generation, the way a closing browser tab severs its socket.
   The remaining panels still render, and a returning client is served the finished comic.
@@ -92,8 +100,7 @@ frontend/     React 19 + Vite + Tailwind + Radix UI, TanStack Query for server s
 backend/      Express API
   ├─ modules/     auth, comics, comments, drafts, ratings, users, jobs
   ├─ services/    AI generation, image provider, Cloudinary storage, email, PDF export
-  ├─ jobs/        job ledger, BullMQ queue, panel worker
-  ├─ db/          Postgres schema + Drizzle migrations (job control plane)
+  ├─ jobs/        job ledger model + service, Mongo-backed queue, panel worker
   ├─ middleware/  JWT auth, content safety, rate limiting, error handling
   └─ config/      centralized env + Mongoose connection
 shared/       Types shared between client and server
@@ -107,8 +114,8 @@ performance/  K6 load tests against the real routes
 |---|---|
 | Frontend | React, TypeScript, Vite, Tailwind CSS, Radix UI, TanStack Query, Framer Motion |
 | Backend | Node.js, Express, TypeScript |
-| Databases | MongoDB (Mongoose) for content, PostgreSQL (Drizzle) for the job ledger |
-| Queue | BullMQ on Redis, with a standalone worker process |
+| Database | MongoDB (Mongoose) — comic content and the generation job ledger |
+| Queue | MongoDB — atomic claims on the job document, with a standalone worker process |
 | Auth | JWT + bcrypt, with email-based password reset |
 | AI | OpenAI — `gpt-4` for story generation, `gpt-image-2` for panel rendering |
 | Media | Cloudinary, `sharp` for processing, `pdfkit` for comic export |
@@ -151,16 +158,16 @@ npm run check     # tsc type check
 | `tests/jobs/state-machine.test.ts` | legal and illegal job transitions |
 | `tests/jobs/worker.test.ts` | retry semantics: a failure is recorded only once retries are exhausted |
 | `tests/jobs/client-fallback.test.ts` | the client degrades quietly when queueing is unavailable |
-| `tests/jobs/ledger-optional.test.ts` | every ledger call is a no-op without a database |
+| `tests/jobs/ledger-optional.test.ts` | every ledger call is a no-op with no database connection |
 | `tests/jobs/worker-resume.integration.test.ts` | a stopped worker's queued panels are picked up by the next one |
 | `tests/jobs/tab-close.integration.test.ts` | generation survives the client vanishing, end to end through the real app |
-| `tests/jobs/*.integration.test.ts` | real Postgres and Redis semantics (see below) |
+| `tests/jobs/*.integration.test.ts` | real MongoDB semantics: the partial unique index and the atomic claim (see below) |
 
-The integration suites skip themselves without `DATABASE_URL` / `REDIS_URL`, which keeps `npm test`
-runnable on a laptop with neither installed. CI provides `postgres:16` and `redis:7` service containers,
-so they always run there — against a real partial unique index, real transactions, and real BullMQ job
-ids. That is not incidental: the constraint that BullMQ rejects `:` in custom job ids was caught by those
-tests and by nothing else.
+The integration suites skip themselves when no `mongod` answers, which keeps `npm test` runnable on a
+laptop with nothing installed. CI provides a `mongo:7` service container, so they always run there —
+against a real partial unique index and real concurrent claims. Each suite connects to its own database,
+because claiming is deliberately not scoped to one job: without that, test files running in parallel
+would consume each other's panels.
 
 Both the type check and the full suite run on every push via GitHub Actions.
 
@@ -193,20 +200,17 @@ Environment variables (see `backend/src/config/env.ts` for the full list and def
 
 | Variable | Purpose |
 |---|---|
-| `MONGODB_URI` | MongoDB connection string (comic content) |
+| `MONGODB_URI` | MongoDB connection string (comic content and the job ledger) |
 | `JWT_SECRET` | Token signing secret |
 | `OPENAI_API_KEY` | Story and image generation |
 | `CLOUDINARY_*` | Panel image hosting (cloud name, API key, secret) |
 | `SMTP_*` | Password-reset email delivery |
-| `DATABASE_URL` | Postgres for the job ledger. Omit to disable it |
-| `REDIS_URL` | Redis for the panel queue. Omit to fall back to synchronous generation |
-| `GENERATION_MODE` | `queue` to use the pipeline; anything else keeps the synchronous path |
+| `GENERATION_MODE` | `queue` to use the durable pipeline; anything else keeps the synchronous path |
 | `WORKER_INLINE` | `true` to host the worker inside the API (single-process deployments) |
 
-With a `DATABASE_URL` set, apply migrations before starting:
+The ledger needs no migration step — its collection and indexes are created on first use.
 
 ```bash
-npm run db:migrate
 npm run worker          # only when running the worker as its own process
 ```
 
