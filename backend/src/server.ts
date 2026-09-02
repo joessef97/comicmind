@@ -13,8 +13,8 @@ const httpServer = createServer(app);
   await connectDB();
 
   // Render's free tier runs a single process, so the worker can be hosted
-  // inside the API instead of being deployed separately. docker-compose runs
-  // it as its own process (see backend/src/worker.ts).
+  // inside the API instead of being deployed separately. Run it on its own
+  // with `npm run worker` (see backend/src/worker.ts).
   if (process.env.WORKER_INLINE === "true") {
     const { startPanelWorker } = await import("./jobs/panel.worker");
     if (startPanelWorker()) {

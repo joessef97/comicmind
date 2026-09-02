@@ -1,10 +1,9 @@
 /**
  * Standalone worker process. Run with `npm run worker`.
  *
- * This is the topology docker-compose uses: the API stays responsive while a
- * separate process does the slow image work. On Render's free tier, where
- * only one process is available, server.ts starts the same worker in-process
- * via WORKER_INLINE instead.
+ * The API stays responsive while this separate process does the slow image
+ * work. On Render's free tier, where only one process is available, server.ts
+ * starts the same worker in-process via WORKER_INLINE instead.
  */
 
 import mongoose from "mongoose";

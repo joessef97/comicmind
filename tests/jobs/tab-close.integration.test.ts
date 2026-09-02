@@ -11,7 +11,7 @@
  * "Closing the tab" is a socket destroy on the live SSE request, which is what
  * a browser does when its tab goes away.
  *
- * Needs a reachable Mongo; skips without one, runs in CI.
+ * Needs a reachable Mongo; skips without one.
  */
 
 import http from "http";

@@ -6,7 +6,7 @@
  * the variable proves nothing — the only honest check is to try. A short
  * server-selection timeout keeps `npm test` on a laptop with no mongod from
  * stalling on the driver's 30s default, which is what lets these suites skip
- * offline and still run in CI.
+ * offline and still run wherever a mongod is available.
  *
  * Each suite passes its own `dbName`. Vitest runs test files in parallel, and
  * claiming work off the queue is deliberately not scoped to one job — a

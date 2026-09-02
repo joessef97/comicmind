@@ -9,8 +9,6 @@
     "dev:benchmark": "cross-env NODE_ENV=development BENCHMARK_MODE=true node --env-file=.env --import tsx/esm backend/src/server.ts",
     "worker": "cross-env NODE_ENV=development node --env-file=.env --import tsx/esm backend/src/worker.ts",
     "worker:prod": "node dist/worker.cjs",
-    "dev:docker": "cross-env NODE_ENV=development node --import tsx/esm backend/src/server.ts",
-    "worker:docker": "cross-env NODE_ENV=development node --import tsx/esm backend/src/worker.ts",
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",

@@ -1,18 +1,17 @@
 /**
  * Worker restart durability.
  *
- * This is the claim the README makes concrete with `docker compose stop
- * worker` / `start worker`, so it deserves a test rather than an assertion of
- * faith: panels queued but not yet rendered must survive the worker going
- * away, and a fresh worker must pick them up and drive the ledger to a
- * terminal state.
+ * This is the claim the README makes concrete by stopping and restarting the
+ * worker process, so it deserves a test rather than an assertion of faith:
+ * panels queued but not yet rendered must survive the worker going away, and
+ * a fresh worker must pick them up and drive the ledger to a terminal state.
  *
  * The processor here is a stand-in for renderPanel — it performs the same
  * ledger writes without calling OpenAI, since what is under test is queue and
  * ledger durability across a restart, not image generation. renderPanel's own
  * retry semantics are covered in worker.test.ts.
  *
- * Needs a reachable Mongo; skips without one, runs in CI.
+ * Needs a reachable Mongo; skips without one.
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -92,7 +91,7 @@ describe.skipIf(!hasInfra)("worker restart", () => {
     await enqueuePanels(Array.from({ length: total }, (_, i) => panelData(ledgerJobId, i)));
 
     // The first worker renders exactly two panels and then stops, the way
-    // `docker compose stop worker` cuts it off. Claiming by hand rather than
+    // killing the worker process cuts it off. Claiming by hand rather than
     // racing a real loop against a timer keeps the cutoff exact: on a fast
     // runner a polling worker drains the whole set inside one interval.
     const stopAfter = 2;

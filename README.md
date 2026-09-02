@@ -1,7 +1,5 @@
 # ComicMind
 
-[![CI](https://github.com/joessef97/comicmind/actions/workflows/ci.yml/badge.svg)](https://github.com/joessef97/comicmind/actions/workflows/ci.yml)
-
 A full-stack platform that turns a one-line idea into a multi-panel comic story — generating the script,
 then rendering every panel with a **consistent character design across panels**, which is the hard part of
 the problem and the thing most AI comic tools get wrong.
@@ -67,19 +65,22 @@ crashed worker waits out the visibility timeout before anyone retries it.
 
 ### Running the real topology
 
-```bash
-docker compose up          # mongo, api, worker
-```
-
-To see the durability claim rather than take it on trust, start a comic and then:
+The API and the worker are separate processes. With a `mongod` running, start each in its own terminal:
 
 ```bash
-docker compose stop worker     # mid-generation
-docker compose start worker    # queued panels resume where they left off
+npm run dev       # API on :5000
+npm run worker    # panel worker
 ```
+
+To see the durability claim rather than take it on trust, start a comic and then stop the worker with
+Ctrl+C mid-generation. Panels already claimed wait out the visibility timeout; everything still queued
+stays on the job document. Start the worker again and it picks the work up where it left off.
+
+(For a single-process setup, leave the worker out and set `WORKER_INLINE=true` — that is how the
+free-tier deployment runs.)
 
 Both durability claims are pinned by tests rather than left to a demo, and both run against a real
-MongoDB in CI:
+MongoDB:
 
 - `tests/jobs/worker-resume.integration.test.ts` — the first worker renders part of a job and shuts down,
   a second takes over the leftovers, and a third case runs two workers at once. Every panel is rendered
@@ -164,12 +165,12 @@ npm run check     # tsc type check
 | `tests/jobs/*.integration.test.ts` | real MongoDB semantics: the partial unique index and the atomic claim (see below) |
 
 The integration suites skip themselves when no `mongod` answers, which keeps `npm test` runnable on a
-laptop with nothing installed. CI provides a `mongo:7` service container, so they always run there —
-against a real partial unique index and real concurrent claims. Each suite connects to its own database,
-because claiming is deliberately not scoped to one job: without that, test files running in parallel
-would consume each other's panels.
+laptop with nothing installed. Point `MONGODB_URI` at a local mongod and they run for real — against a
+real partial unique index and real concurrent claims. Each suite connects to its own database, because
+claiming is deliberately not scoped to one job: without that, test files running in parallel would
+consume each other's panels.
 
-Both the type check and the full suite run on every push via GitHub Actions.
+Run `npm run check` and `npm test` before pushing.
 
 ## Performance
 

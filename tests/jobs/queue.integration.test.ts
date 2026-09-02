@@ -4,7 +4,7 @@
  * instant never come away with the same panel, and that a claim left behind by
  * a dead worker becomes available again.
  *
- * Skipped when no mongod answers; CI provides a mongo service container.
+ * Skipped when no mongod answers.
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";

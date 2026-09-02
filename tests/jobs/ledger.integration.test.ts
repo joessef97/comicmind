@@ -5,7 +5,7 @@
  * step with the panels it counts.
  *
  * Skipped automatically when no mongod answers, so `npm test` still runs
- * offline. CI provides a mongo service container, so they always run there.
+ * offline. Point MONGODB_URI at a real mongod and they run for real.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
