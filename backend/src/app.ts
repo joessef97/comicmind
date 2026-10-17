@@ -7,6 +7,7 @@ import draftRoutes from "./modules/drafts/draft.routes";
 import ratingRoutes from "./modules/ratings/rating.routes";
 import { comicCommentRouter, commentDeleteRouter } from "./modules/comments/comment.routes";
 import { getUploadsRoot, getStorageProviderName } from "./services/image-storage";
+import jobRoutes from "./modules/jobs/job.routes";
 
 const app = express();
 
@@ -109,6 +110,7 @@ app.use("/api/comics", comicCommentRouter);
 app.use("/api/comments", commentDeleteRouter);
 app.use("/api/drafts", draftRoutes);
 app.use("/api/images", imageRouter);
+app.use("/api/jobs", jobRoutes);
 
 export { app };
 

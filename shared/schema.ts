@@ -13,6 +13,54 @@ export interface InsertComic {
   characterRefUrl?: string;
 }
 
+export type GenerationJobStatus = "pending" | "in_progress" | "completed" | "failed" | "cancelled";
+export type GenerationJobPanelStatus = "pending" | "in_progress" | "completed" | "failed";
+
+export interface InsertGenerationJob {
+  title: string;
+  style: string;
+  idea: string;
+  panels: Array<{
+    number: number;
+    description: string;
+    dialogue?: string;
+    narration?: string;
+  }>;
+  characterSheet?: string;
+  characterRefUrl?: string;
+}
+
+/** Validation for the data persisted before a background generation job starts. */
+export function validateGenerationJobInput(
+  data: unknown,
+): { valid: boolean; message?: string; value?: InsertGenerationJob } {
+  const comicValidation = validateComicInput(data);
+  if (!comicValidation.valid || !comicValidation.value) return comicValidation;
+
+  const { panels } = comicValidation.value;
+  if (!panels.length) return { valid: false, message: "At least one panel is required" };
+  if (panels.some((panel: any, index: number) =>
+    !panel || typeof panel.description !== "string" || !panel.description.trim() ||
+    (panel.number !== undefined && (!Number.isInteger(panel.number) || panel.number < 1)) ||
+    (panel.number !== undefined && panel.number !== index + 1),
+  )) {
+    return { valid: false, message: "Each panel needs a non-empty description and sequential number" };
+  }
+
+  return {
+    valid: true,
+    value: {
+      ...comicValidation.value,
+      panels: panels.map((panel: any, index: number) => ({
+        number: panel.number ?? index + 1,
+        description: panel.description.trim(),
+        dialogue: typeof panel.dialogue === "string" ? panel.dialogue : "",
+        narration: typeof panel.narration === "string" ? panel.narration : "",
+      })),
+    },
+  };
+}
+
 export function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

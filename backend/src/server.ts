@@ -4,6 +4,7 @@ import { connectDB } from "./config/db";
 import { log } from "./utils/logger";
 import { errorHandler } from "./middleware/error.middleware";
 import { serveStatic } from "./static";
+import { generationJobWorker } from "./modules/jobs/job.worker";
 import { ogMetaMiddleware } from "./middleware/og-meta";
 
 const httpServer = createServer(app);
@@ -12,6 +13,7 @@ const httpServer = createServer(app);
   // Connect to MongoDB
   await connectDB();
 
+  generationJobWorker.start();
   // Error handler (must come after routes, before vite/static catch-all)
   app.use(errorHandler);
 

@@ -41,6 +41,7 @@ interface Panel {
   narration: string;
   imageUrl?: string;
   error?: string;
+  status?: "pending" | "in_progress" | "completed" | "failed";
   generationMeta?: {
     model: string;
     prompt: string;
@@ -48,6 +49,14 @@ interface Panel {
     createdAt: string;
     costEstimate: number;
   };
+}
+
+interface GenerationJob {
+  id: string;
+  status: "pending" | "in_progress" | "completed" | "failed" | "cancelled";
+  panels: Panel[];
+  progress: { completed: number; total: number };
+  error?: string;
 }
 
 interface DraftData {
@@ -92,6 +101,7 @@ export default function Editor() {
   const [isPublished, setIsPublished] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [generationProgress, setGenerationProgress] = useState("");
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const draftIdRef = useRef<string | null>(null);
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
@@ -255,11 +265,70 @@ export default function Editor() {
     }
   };
 
+  // A generation request only enqueues work. Polling makes progress resilient
+  // to a closed request tab and renders persisted panel results as they arrive.
+  useEffect(() => {
+    if (!generationJobId) return;
+    let cancelled = false;
+    let polling = false;
+
+    const poll = async () => {
+      if (polling || cancelled) return;
+      polling = true;
+      try {
+        const response = await apiRequest("GET", `/api/jobs/${generationJobId}`);
+        const { job }: { job: GenerationJob } = await response.json();
+        if (cancelled) return;
+
+        setPanels(job.panels);
+        setPanelProgress({ done: job.progress.completed, total: job.progress.total });
+        setPanelLoading(Object.fromEntries(job.panels
+          .filter((panel) => panel.status === "in_progress")
+          .map((panel) => [panel.number, true])));
+        setGenerationProgress(
+          job.status === "pending"
+            ? "Your comic is queued for generation..."
+            : `Creating panel images: ${job.progress.completed} of ${job.progress.total}`,
+        );
+
+        if (job.status === "completed" || job.status === "failed" || job.status === "cancelled") {
+          setGenerationJobId(null);
+          setIsGeneratingImages(false);
+          setPanelLoading({});
+          setGenerationProgress("");
+          await saveDraft({ panels: job.panels, status: job.status === "completed" ? "COMPLETED" : "FAILED" } as any);
+          if (job.status === "completed") {
+            toast({ title: "Comic generated!", description: "Your comic panels are ready." });
+          } else {
+            toast({
+              title: job.status === "cancelled" ? "Generation cancelled" : "Generation failed",
+              description: job.error || "Your generated panels have been preserved.",
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (error) {
+        // Keep polling: transient network failures must not abandon durable work.
+        console.warn("[editor] Job polling failed:", error);
+      } finally {
+        polling = false;
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(() => void poll(), 2_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [generationJobId, saveDraft, toast]);
+
   // ── Generate comic with auto-draft ──────────────────────────────────
   const handleGenerate = async (options?: { reuseExistingText?: boolean }) => {
     // Guard: prevent duplicate submissions (double-click / race)
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
+    let queuedJob = false;
 
     try {
     const reuseExistingText = options?.reuseExistingText === true;
@@ -370,112 +439,26 @@ export default function Editor() {
       }
       setForceRegenerateRef(false);
 
-      // Step 2: Generate images — per-panel via /api/images/generate
+      // Step 2: persist the job, then return control to the browser. Image
+      // generation happens in the durable worker and is observed by polling.
       setIsGeneratingStory(false);
       setIsGeneratingImages(true);
-      setGenerationProgress("Generating panel images... This may take a minute.");
+      setGenerationProgress("Queueing panel images...");
       setPanelProgress({ done: 0, total: storyPanels.length });
-
-      // Validate all panels upfront before generating any images
-      try {
-        const validateRes = await apiRequest("POST", "/api/comics/validate-panels", {
-          panels: storyPanels,
-        });
-        const validateData = await validateRes.json();
-        if (!validateRes.ok) {
-          throw new Error(
-            validateData.message ||
-            "Panel content validation failed. Please revise your story.",
-          );
-        }
-        console.log("[editor] All panels passed validation:", validateData.validPanelCount);
-      } catch (validateErr: any) {
-        console.error("[editor] Panel validation failed:", validateErr);
-        setIsGeneratingImages(false);
-        setGenerationProgress("");
-        toast({
-          title: "Content validation failed",
-          description: validateErr.message || "One or more panels contain inappropriate content. Please regenerate the story.",
-          variant: "destructive",
-        });
-        setStep("style");
-        return;
-      }
-
-      // Switch to "result" step early so users see panels appearing one-by-one
+      const jobRes = await apiRequest("POST", "/api/jobs", {
+        title,
+        style: selectedStyle,
+        idea: premise,
+        panels: storyPanels,
+        characterSheet: csText || undefined,
+        characterRefUrl: charRefUrlCaptured || undefined,
+      });
+      const { jobId } = await jobRes.json();
+      setPanels(storyPanels);
       setStep("result");
-
-      const panelsWithImages = [...storyPanels] as Panel[];
-
-      // Generate panels in parallel batches of 2 to cut wait time ~in half.
-      // Using 2 (not 3+) to stay within OpenAI rate limits on free-tier.
-      const CONCURRENCY = 2;
-      for (let batchStart = 0; batchStart < panelsWithImages.length; batchStart += CONCURRENCY) {
-        const batchEnd = Math.min(batchStart + CONCURRENCY, panelsWithImages.length);
-        const batchIndices = Array.from({ length: batchEnd - batchStart }, (_, k) => batchStart + k);
-
-        // Mark all panels in this batch as loading
-        for (const i of batchIndices) {
-          setPanelLoading((prev) => ({ ...prev, [panelsWithImages[i].number]: true }));
-        }
-        setGenerationProgress(
-          `Generating images ${batchStart + 1}–${batchEnd} of ${panelsWithImages.length}…`,
-        );
-
-        // Fire all requests in this batch concurrently
-        const batchResults = await Promise.allSettled(
-          batchIndices.map(async (i) => {
-            const panel = panelsWithImages[i];
-            const imgRes = await apiRequest("POST", "/api/images/generate", {
-              comicId: activeComicId,
-              panelIndex: i,
-              prompt: panel.description,
-              style: selectedStyle,
-              characterSheet: csText || undefined,
-              characterRefUrl: charRefUrlCaptured || undefined,
-            });
-            const imgData = await imgRes.json();
-            return { i, imgData };
-          }),
-        );
-
-        // Process results and update UI
-        for (const result of batchResults) {
-          if (result.status === "fulfilled") {
-            const { i, imgData } = result.value;
-            panelsWithImages[i] = {
-              ...panelsWithImages[i],
-              imageUrl: imgData.imageUrl,
-              generationMeta: imgData.meta,
-              error: undefined,
-            };
-          } else {
-            // Find which index failed (match by order)
-            const failedIdx = batchIndices[batchResults.indexOf(result)];
-            console.error(`Panel ${failedIdx + 1} generation failed:`, result.reason);
-            panelsWithImages[failedIdx] = {
-              ...panelsWithImages[failedIdx],
-              error: result.reason?.message || `Failed to generate image for panel ${failedIdx + 1}`,
-            };
-          }
-        }
-
-        // Clear loading state for this batch and update progress
-        for (const i of batchIndices) {
-          setPanelLoading((prev) => ({ ...prev, [panelsWithImages[i].number]: false }));
-        }
-        setPanelProgress((prev) => ({ ...prev, done: prev.done + batchIndices.length }));
-
-        // Update state after each batch so user sees incremental results
-        setPanels([...panelsWithImages]);
-      }
-
-      // Mark draft as completed
-      await saveDraft({ panels: panelsWithImages, characterSheet: csText, characterRefUrl: charRefUrlCaptured, status: "COMPLETED" } as any);
-
-      setIsGeneratingImages(false);
-      setGenerationProgress("");
-      toast({ title: "Comic generated!", description: "Your comic panels are ready." });
+      setGenerationJobId(jobId);
+      queuedJob = true;
+      setGenerationProgress("Your comic is queued for generation...");
     } catch (error: any) {
       console.error("Generation error:", error);
 
@@ -491,8 +474,12 @@ export default function Editor() {
       setStep("style");
     } finally {
       setIsGeneratingStory(false);
-      setIsGeneratingImages(false);
-      setGenerationProgress("");
+      // Once a durable job has been enqueued, the polling effect owns image
+      // generation state. Do not hide progress while work continues server-side.
+      if (!queuedJob) {
+        setIsGeneratingImages(false);
+        setGenerationProgress("");
+      }
     }
     } finally {
       isSubmittingRef.current = false;
