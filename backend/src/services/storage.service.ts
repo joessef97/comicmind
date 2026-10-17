@@ -110,6 +110,7 @@ function toDraft(doc: any): Draft {
     panels: doc.panels,
     characterSheet: doc.characterSheet,
     characterRefUrl: doc.characterRefUrl,
+    generationJobId: doc.generationJobId,
     status: doc.status,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,

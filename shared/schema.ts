@@ -28,6 +28,7 @@ export interface InsertGenerationJob {
   }>;
   characterSheet?: string;
   characterRefUrl?: string;
+  draftId?: string;
 }
 
 /** Validation for the data persisted before a background generation job starts. */
@@ -38,6 +39,10 @@ export function validateGenerationJobInput(
   if (!comicValidation.valid || !comicValidation.value) return comicValidation;
 
   const { panels } = comicValidation.value;
+  const draftId = (data as any)?.draftId;
+  if (draftId !== undefined && (typeof draftId !== "string" || !draftId.trim())) {
+    return { valid: false, message: "draftId must be a non-empty string" };
+  }
   if (!panels.length) return { valid: false, message: "At least one panel is required" };
   if (panels.some((panel: any, index: number) =>
     !panel || typeof panel.description !== "string" || !panel.description.trim() ||
@@ -57,6 +62,7 @@ export function validateGenerationJobInput(
         dialogue: typeof panel.dialogue === "string" ? panel.dialogue : "",
         narration: typeof panel.narration === "string" ? panel.narration : "",
       })),
+      draftId: draftId?.trim(),
     },
   };
 }
@@ -187,6 +193,7 @@ export interface Draft {
   panels: any[];
   characterSheet?: string;
   characterRefUrl?: string;
+  generationJobId?: string;
   status: DraftStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -199,6 +206,7 @@ export interface InsertDraft {
   panels?: any[];
   characterSheet?: string;
   characterRefUrl?: string;
+  generationJobId?: string;
   status?: DraftStatus;
 }
 

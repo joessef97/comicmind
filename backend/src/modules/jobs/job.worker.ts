@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { GenerationJobModel } from "./job.model";
+import { DraftModel } from "../drafts/draft.model";
 import { generatePanelImage } from "../../services/ai.service";
 import { isPersistedUrl, persistImage, persistImageBuffer } from "../../services/image-storage";
 
@@ -108,6 +109,14 @@ export class GenerationJobWorker {
           { arrayFilters: [{ "panel.number": panel.number }] },
         );
         if (!committed.modifiedCount) return;
+        Object.assign(panel, {
+          status: "completed",
+          imageUrl: stored.imageUrl,
+          storagePublicId: stored.storagePublicId,
+          generationMeta: generated.generationMeta,
+          error: undefined,
+        });
+        await this.syncDraft(job, "GENERATING");
       } catch (error) {
         const message = error instanceof Error ? error.message : "Panel generation failed";
         await GenerationJobModel.updateOne(
@@ -123,6 +132,7 @@ export class GenerationJobWorker {
           },
           { arrayFilters: [{ "panel.number": panel.number }] },
         );
+        await this.syncDraft(job, "FAILED");
         return;
       }
     }
@@ -134,6 +144,7 @@ export class GenerationJobWorker {
         $unset: { workerLockUntil: 1, workerLockToken: 1 },
       },
     );
+    await this.syncDraft(job, "COMPLETED", true);
   }
 
   private async markPanelStarted(jobId: unknown, panelNumber: number, lockToken: string): Promise<boolean> {
@@ -161,6 +172,13 @@ export class GenerationJobWorker {
       if (result) return { imageUrl: result.url, storagePublicId: result.publicId };
     }
     return { imageUrl: generated.imageUrl, storagePublicId: undefined };
+  }
+
+  private async syncDraft(job: any, status: "GENERATING" | "COMPLETED" | "FAILED", complete = false) {
+    if (!job.draftId) return;
+    const update: any = { $set: { panels: job.panels, status } };
+    if (complete) update.$unset = { generationJobId: 1 };
+    await DraftModel.updateOne({ _id: job.draftId, userId: job.userId }, update);
   }
 }
 

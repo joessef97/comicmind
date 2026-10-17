@@ -68,6 +68,7 @@ interface DraftData {
   characterSheet?: string;
   characterRefUrl?: string;
   status: string;
+  generationJobId?: string;
 }
 
 const ART_STYLES = [
@@ -144,6 +145,7 @@ export default function Editor() {
       setCharRefUrl("");
       setRegenerateExistingStory(false);
       setForceRegenerateRef(false);
+      setGenerationJobId(null);
       setPanels([]);
       setSelectedPanel(0);
       setIsPublished(false);
@@ -170,6 +172,7 @@ export default function Editor() {
           setCharRefUrl(d.characterRefUrl || "");
           setDraftId(d.id);
           draftIdRef.current = d.id;
+          setGenerationJobId(d.generationJobId || null);
 
           // Determine which step to show based on status/data
           if (regenerateRequested) {
@@ -452,6 +455,7 @@ export default function Editor() {
         panels: storyPanels,
         characterSheet: csText || undefined,
         characterRefUrl: charRefUrlCaptured || undefined,
+        draftId: savedDraftId,
       });
       const { jobId } = await jobRes.json();
       setPanels(storyPanels);

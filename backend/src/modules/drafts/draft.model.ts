@@ -12,6 +12,7 @@ export interface IDraft extends Document {
   panels: IPanel[];
   characterSheet?: string;
   characterRefUrl?: string;
+  generationJobId?: string;
   status: "DRAFT" | "GENERATING" | "COMPLETED" | "FAILED";
   createdAt: Date;
   updatedAt: Date;
@@ -52,6 +53,7 @@ const draftSchema = new Schema<IDraft>(
       required: false,
       trim: true,
     },
+    generationJobId: { type: String, index: true },
     status: {
       type: String,
       enum: ["DRAFT", "GENERATING", "COMPLETED", "FAILED"],

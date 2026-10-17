@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   model: { updateOne: vi.fn(), findOneAndUpdate: vi.fn() },
+  draftModel: { updateOne: vi.fn() },
   generatePanelImage: vi.fn(),
   persistImage: vi.fn(),
   persistImageBuffer: vi.fn(),
@@ -9,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../backend/src/modules/jobs/job.model", () => ({ GenerationJobModel: mocks.model }));
+vi.mock("../backend/src/modules/drafts/draft.model", () => ({ DraftModel: mocks.draftModel }));
 vi.mock("../backend/src/services/ai.service", () => ({ generatePanelImage: mocks.generatePanelImage }));
 vi.mock("../backend/src/services/image-storage", () => ({
   persistImage: mocks.persistImage,
@@ -31,7 +33,7 @@ describe("generation job recovery", () => {
     }));
 
     const queuedJob = {
-      _id: "job-1", style: "noir", status: "in_progress",
+      _id: "job-1", userId: "user-1", draftId: "draft-1", style: "noir", status: "in_progress",
       panels: Array.from({ length: 6 }, (_, index) => ({
         number: index + 1, description: `Panel ${index + 1}`, status: "pending",
       })),
@@ -41,6 +43,15 @@ describe("generation job recovery", () => {
 
     expect(mocks.generatePanelImage).toHaveBeenCalledTimes(6);
     expect(mocks.persistImage).toHaveBeenCalledTimes(6);
+    expect(mocks.draftModel.updateOne).toHaveBeenLastCalledWith(
+      { _id: "draft-1", userId: "user-1" },
+      expect.objectContaining({
+        $set: expect.objectContaining({ status: "COMPLETED", panels: expect.arrayContaining([
+          expect.objectContaining({ number: 6, imageUrl: "/uploads/job-1/panel-6.png" }),
+        ]) }),
+        $unset: { generationJobId: 1 },
+      }),
+    );
     expect(mocks.model.updateOne).toHaveBeenLastCalledWith(
       { _id: "job-1", status: "in_progress", workerLockToken: "new-lease-token" },
       expect.objectContaining({ $set: expect.objectContaining({ status: "completed" }) }),

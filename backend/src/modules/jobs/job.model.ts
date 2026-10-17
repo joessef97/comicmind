@@ -36,6 +36,7 @@ export interface IGenerationJob extends Document {
   idea: string;
   characterSheet?: string;
   characterRefUrl?: string;
+  draftId?: string;
   status: JobStatus;
   panels: IJobPanel[];
   progress: { completed: number; total: number };
@@ -83,6 +84,7 @@ const generationJobSchema = new Schema<IGenerationJob>(
     idea: { type: String, required: true, maxlength: 1000 },
     characterSheet: String,
     characterRefUrl: { type: String, trim: true },
+    draftId: { type: String, index: true },
     status: {
       type: String,
       enum: ["pending", "in_progress", "completed", "failed", "cancelled"],

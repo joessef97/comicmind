@@ -10,10 +10,12 @@ const mocks = vi.hoisted(() => ({
     findOneAndUpdate: vi.fn(),
   },
   worker: { wake: vi.fn() },
+  draftModel: { findOne: vi.fn(), updateOne: vi.fn() },
 }));
 
 vi.mock("../../backend/src/modules/jobs/job.model", () => ({ GenerationJobModel: mocks.jobModel }));
 vi.mock("../../backend/src/modules/jobs/job.worker", () => ({ generationJobWorker: mocks.worker }));
+vi.mock("../../backend/src/modules/drafts/draft.model", () => ({ DraftModel: mocks.draftModel }));
 vi.mock("../../backend/src/services/image-storage", async () => {
   const path = await import("path");
   return {
@@ -58,6 +60,25 @@ describe("generation job endpoints", () => {
     const response = await request(app).get("/api/jobs/other-users-job").set("Authorization", `Bearer ${token}`);
     expect(response.status).toBe(404);
     expect(mocks.jobModel.findOne).toHaveBeenCalledWith({ _id: "other-users-job", userId: "user-1" });
+  });
+
+  it("links an owned draft to the queued job so a reopened editor can resume it", async () => {
+    mocks.draftModel.findOne.mockResolvedValue({ _id: "draft-1", userId: "user-1" });
+    mocks.jobModel.create.mockResolvedValue({
+      _id: "job-for-draft", userId: "user-1", title: "Signal", style: "noir", idea: "Lost satellite",
+      status: "pending", panels: [], progress: { completed: 0, total: 1 },
+    });
+
+    const response = await request(app)
+      .post("/api/jobs")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "Signal", style: "noir", idea: "Lost satellite", draftId: "draft-1", panels: [{ number: 1, description: "Roof" }] });
+
+    expect(response.status).toBe(202);
+    expect(mocks.draftModel.updateOne).toHaveBeenCalledWith(
+      { _id: "draft-1", userId: "user-1" },
+      { $set: { generationJobId: "job-for-draft", status: "GENERATING" } },
+    );
   });
 
   it("cancels only an active owned job", async () => {

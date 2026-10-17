@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import type { AuthRequest } from "../auth/auth.middleware";
 import { GenerationJobModel } from "./job.model";
+import { DraftModel } from "../drafts/draft.model";
 import { validateGenerationJobInput } from "@shared/schema";
 import { generationJobWorker } from "./job.worker";
 
@@ -32,6 +33,10 @@ export async function enqueueJob(req: AuthRequest, res: Response) {
     }
 
     const input = validation.value;
+    if (input.draftId) {
+      const draft = await DraftModel.findOne({ _id: input.draftId, userId: req.userId! });
+      if (!draft) return res.status(404).json({ message: "Draft not found" });
+    }
     const job = await GenerationJobModel.create({
       ...input,
       userId: req.userId!,
@@ -39,6 +44,13 @@ export async function enqueueJob(req: AuthRequest, res: Response) {
       panels: input.panels.map((panel) => ({ ...panel, status: "pending", attempts: 0 })),
       progress: { completed: 0, total: input.panels.length },
     });
+
+    if (input.draftId) {
+      await DraftModel.updateOne(
+        { _id: input.draftId, userId: req.userId! },
+        { $set: { generationJobId: String(job._id), status: "GENERATING" } },
+      );
+    }
 
     generationJobWorker.wake();
     return res.status(202).json({ jobId: String(job._id), job: serializeJob(job) });
