@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, MoreVertical, Clock, Layout, Loader2, Trash2, FileText, AlertCircle, CheckCircle2, Wand2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { visibleDashboardDrafts } from "@/lib/draft-visibility";
 import { useToast } from "@/hooks/use-toast";
 import SubscriptionStatus from "@/components/subscription-status";
 
@@ -94,12 +95,7 @@ export default function Dashboard() {
       const comicsData = await comicsRes.json();
       const draftsData = await draftsRes.json();
       setComics(comicsData.comics);
-      setDrafts(
-        (draftsData.drafts || []).filter(
-          (d: Draft) =>
-            d.status !== "COMPLETED" && !(d.status === "GENERATING" && (!d.panels || d.panels.length === 0)),
-        ),
-      );
+      setDrafts(visibleDashboardDrafts(draftsData.drafts || []));
       const subData = await subRes.json();
       setIsSubscribed(!!subData.isActive);
     } catch (error: any) {
