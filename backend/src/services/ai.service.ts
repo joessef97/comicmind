@@ -3,6 +3,7 @@ import crypto from "crypto";
 import type { ImageProvider, ImageGenerationMeta } from "./image-provider";
 import { getOpenAIImageService } from "./openai-image-service";
 import { getBannedTokensForPrompt } from "../utils/content-filter";
+import { resolveStoryModel } from "./story-model";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -318,7 +319,7 @@ alternative words above.
       : "anonymous";
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: resolveStoryModel(),
       user: openaiUser,
       messages: [
         {
