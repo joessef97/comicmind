@@ -33,6 +33,7 @@ export interface IStorage {
   getDraft(id: string): Promise<Draft | undefined>;
   getDraftsByUser(userId: string, limit?: number, offset?: number): Promise<Draft[]>;
   updateDraft(id: string, userId: string, updates: Partial<InsertDraft>): Promise<Draft | undefined>;
+  updateDraftPanel(id: string, userId: string, panelIndex: number, updates: Record<string, unknown>): Promise<Draft | undefined>;
   deleteDraft(id: string, userId: string): Promise<boolean>;
   cleanupStaleDrafts(userId: string, maxAgeMinutes?: number): Promise<number>;
 
@@ -252,6 +253,15 @@ export class MongoStorage implements IStorage {
       { _id: id, userId },
       { $set: updates },
       { new: true }
+    );
+    return doc ? toDraft(doc) : undefined;
+  }
+
+  async updateDraftPanel(id: string, userId: string, panelIndex: number, updates: Record<string, unknown>): Promise<Draft | undefined> {
+    const doc = await DraftModel.findOneAndUpdate(
+      { _id: id, userId, [`panels.${panelIndex}`]: { $exists: true } },
+      { $set: Object.fromEntries(Object.entries(updates).map(([key, value]) => [`panels.${panelIndex}.${key}`, value])) },
+      { new: true },
     );
     return doc ? toDraft(doc) : undefined;
   }

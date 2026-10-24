@@ -32,7 +32,7 @@ const DEFAULT_CONCURRENCY = 2;
  * so the ledger reflects outcomes rather than every intermediate stumble.
  */
 export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: string }> {
-  const { jobId, userId, comicId, panelIndex, prompt, style } = job.data;
+  const { jobId, userId, comicId, draftId, panelIndex, prompt, style } = job.data;
 
   await jobService.markRunning(jobId);
 
@@ -75,11 +75,19 @@ export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: s
       });
     }
 
+    if (draftId) {
+      await writePanelToDraft(draftId, userId, panelIndex, {
+        imageUrl: finalUrl,
+        storagePublicId,
+        generationMeta: result.meta,
+      });
+    }
+
     await jobService.recordPanelResult(jobId, panelIndex, {
       status: "succeeded",
       imageUrl: finalUrl,
     });
-    await jobService.finalizeIfComplete(jobId);
+    await syncTerminalDraftStatus(draftId, userId, await jobService.finalizeIfComplete(jobId));
 
     return { imageUrl: finalUrl };
   } catch (err: any) {
@@ -93,7 +101,7 @@ export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: s
         status: "failed",
         error: message,
       });
-      await jobService.finalizeIfComplete(jobId);
+      await syncTerminalDraftStatus(draftId, userId, await jobService.finalizeIfComplete(jobId));
       console.error(`[worker] Panel ${panelIndex} of job ${jobId} failed permanently: ${message}`);
     } else {
       console.warn(
@@ -103,6 +111,35 @@ export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: s
 
     throw err;
   }
+}
+
+/**
+ * The worker, rather than the open browser tab, owns durable draft progress.
+ * That makes every completed panel visible after a close/reopen interruption.
+ */
+async function writePanelToDraft(
+  draftId: string,
+  userId: string,
+  panelIndex: number,
+  updates: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await storage.updateDraftPanel(draftId, userId, panelIndex, { ...updates, error: undefined });
+  } catch (err) {
+    console.error(`[worker] Failed to write panel ${panelIndex} to draft ${draftId}:`, err);
+  }
+}
+
+async function syncTerminalDraftStatus(
+  draftId: string | null | undefined,
+  userId: string,
+  job: Awaited<ReturnType<typeof jobService.finalizeIfComplete>>,
+): Promise<void> {
+  if (!draftId || !job || !jobService.isTerminal(job.status)) return;
+
+  await storage.updateDraft(draftId, userId, {
+    status: job.status === "failed" ? "FAILED" : "COMPLETED",
+  } as any);
 }
 
 async function downloadCharacterReference(url?: string): Promise<Buffer | undefined> {

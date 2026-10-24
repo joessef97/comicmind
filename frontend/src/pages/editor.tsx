@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ComicPanel } from "@/components/editor/comic-panel";
 import { ComicBookReader } from "@/components/reader/comic-book-reader";
 import {
+  findActiveJob,
   startGenerationJob,
   watchGenerationJob,
   type JobSnapshot,
@@ -176,6 +177,22 @@ export default function Editor() {
           setCharRefUrl(d.characterRefUrl || "");
           setDraftId(d.id);
           draftIdRef.current = d.id;
+
+          // A closed browser must reconnect to the same server-side job rather
+          // than starting a new paid generation run.
+          const activeJobId = await findActiveJob({ draftId: d.id });
+          if (activeJobId) {
+            setStep("result");
+            setIsGeneratingImages(true);
+            setGenerationProgress("Reconnecting to comic generation...");
+            void watchQueuedGeneration(
+              activeJobId,
+              d.panels || [],
+              d.characterSheet || "",
+              d.characterRefUrl || "",
+            );
+            return;
+          }
 
           // Determine which step to show based on status/data
           if (regenerateRequested) {
@@ -406,9 +423,6 @@ export default function Editor() {
     try {
       let storyPanels: Panel[] = [];
       let csText = characterSheet || "";
-      // Local capture: state set below is not readable again in this same run.
-      let jobIdCaptured: string | null = null;
-
       if (shouldReuseText) {
         setIsGeneratingStory(false);
         storyPanels = reusablePanels;
@@ -425,9 +439,6 @@ export default function Editor() {
         const storyData = await storyRes.json();
         storyPanels = storyData.panels;
         setPanels(storyPanels);
-
-        // Present only when the server-side generation ledger is enabled.
-        jobIdCaptured = storyData.jobId ?? null;
 
         // Store the character sheet for image consistency
         csText = storyData.characterSheet?.description || "";
@@ -518,13 +529,13 @@ export default function Editor() {
           panels: storyPanels.map((p) => ({ description: p.description })),
           style: selectedStyle,
           comicId: activeComicId,
-          draftId: draftId ?? null,
+          draftId: savedDraftId,
           characterSheet: csText || undefined,
           characterRefUrl: charRefUrlCaptured || undefined,
         },
         // Stable across retries of this same submit, so a double click or a
         // dropped response attaches to the original job instead of paying twice.
-        jobIdCaptured || `${draftId ?? "draft"}-${storyPanels.length}-${title}`,
+        `${savedDraftId}-${storyPanels.length}-${title}`,
       );
 
       if (queuedJobId) {
@@ -555,7 +566,6 @@ export default function Editor() {
             const panel = panelsWithImages[i];
             const imgRes = await apiRequest("POST", "/api/images/generate", {
               comicId: activeComicId,
-              jobId: jobIdCaptured || undefined,
               panelIndex: i,
               prompt: panel.description,
               style: selectedStyle,

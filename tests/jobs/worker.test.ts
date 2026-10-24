@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => ({
   isPersistedUrl: vi.fn(() => true),
   getComic: vi.fn(),
   updateComic: vi.fn(),
+  getDraft: vi.fn(),
+  updateDraft: vi.fn(),
+  updateDraftPanel: vi.fn(),
   markRunning: vi.fn(),
   recordPanelResult: vi.fn(),
   finalizeIfComplete: vi.fn(),
@@ -28,13 +31,20 @@ vi.mock("../../backend/src/services/image-storage", () => ({
 }));
 
 vi.mock("../../backend/src/services/storage.service", () => ({
-  storage: { getComic: mocks.getComic, updateComic: mocks.updateComic },
+  storage: {
+    getComic: mocks.getComic,
+    updateComic: mocks.updateComic,
+    getDraft: mocks.getDraft,
+    updateDraft: mocks.updateDraft,
+    updateDraftPanel: mocks.updateDraftPanel,
+  },
 }));
 
 vi.mock("../../backend/src/jobs/job.service", () => ({
   markRunning: mocks.markRunning,
   recordPanelResult: mocks.recordPanelResult,
   finalizeIfComplete: mocks.finalizeIfComplete,
+  isTerminal: (status: string) => ["succeeded", "partial", "failed", "cancelled"].includes(status),
 }));
 
 vi.mock("../../backend/src/jobs/queue", () => ({
@@ -83,6 +93,42 @@ describe("panel worker", () => {
     expect(mocks.finalizeIfComplete).toHaveBeenCalledWith("job-1");
   });
 
+  it("persists each queued panel into its linked draft without a browser connected", async () => {
+    mocks.generateImage.mockResolvedValue({
+      imageUrl: "https://cdn.test/panel-2.png",
+      meta: { model: "gpt-image-2" },
+    });
+    const job = makeJob();
+    job.data.draftId = "draft-1";
+
+    await renderPanel(job);
+
+    expect(mocks.updateDraftPanel).toHaveBeenCalledWith(
+      "draft-1",
+      "user-1",
+      2,
+      expect.objectContaining({
+        imageUrl: "https://cdn.test/panel-2.png",
+      }),
+    );
+  });
+
+  it("marks the linked draft complete when the final queued panel finishes", async () => {
+    mocks.generateImage.mockResolvedValue({ imageUrl: "https://cdn.test/panel-2.png", meta: {} });
+    mocks.finalizeIfComplete.mockResolvedValue({ status: "succeeded" });
+
+    const job = makeJob();
+    job.data.draftId = "draft-1";
+
+    await renderPanel(job);
+
+    expect(mocks.updateDraft).toHaveBeenLastCalledWith(
+      "draft-1",
+      "user-1",
+      expect.objectContaining({ status: "COMPLETED" }),
+    );
+  });
+
   it("does not record a failure while retries remain", async () => {
     mocks.generateImage.mockRejectedValue(new Error("rate limited"));
 
@@ -97,6 +143,7 @@ describe("panel worker", () => {
 
   it("records a failure once retries are exhausted", async () => {
     mocks.generateImage.mockRejectedValue(new Error("content policy"));
+    mocks.finalizeIfComplete.mockResolvedValue({ status: "failed" });
 
     // Attempt 3 of 3 — this is the last chance, so the panel is genuinely lost.
     await expect(renderPanel(makeJob({ attemptsMade: 2, attempts: 3 }))).rejects.toThrow(
@@ -109,6 +156,21 @@ describe("panel worker", () => {
     });
     // Still finalizes: siblings must be delivered even though this panel failed.
     expect(mocks.finalizeIfComplete).toHaveBeenCalledWith("job-1");
+  });
+
+  it("marks a linked draft failed when every queued panel has failed", async () => {
+    mocks.generateImage.mockRejectedValue(new Error("content policy"));
+    mocks.finalizeIfComplete.mockResolvedValue({ status: "failed" });
+    const job = makeJob({ attemptsMade: 2, attempts: 3 });
+    job.data.draftId = "draft-1";
+
+    await expect(renderPanel(job)).rejects.toThrow("content policy");
+
+    expect(mocks.updateDraft).toHaveBeenCalledWith(
+      "draft-1",
+      "user-1",
+      expect.objectContaining({ status: "FAILED" }),
+    );
   });
 
   it("rethrows so BullMQ owns the retry decision", async () => {
