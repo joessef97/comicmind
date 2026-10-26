@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { validateContentSafety } from "@/lib/content-filter";
+import { missingPanelIndices, shouldResumePanelGeneration } from "@/lib/panel-recovery";
 import { useLocation, useParams } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -105,6 +106,8 @@ export default function Editor() {
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const [loadedComicId, setLoadedComicId] = useState<string | null>(null);
   const [regenerateExistingStory, setRegenerateExistingStory] = useState(regenerateRequested);
+  const [resumeMissingPanels, setResumeMissingPanels] = useState(false);
+  const resumeStartedRef = useRef(false);
 
   /** Prevent duplicate submissions of the generate flow */
   const isSubmittingRef = useRef(false);
@@ -150,6 +153,8 @@ export default function Editor() {
       setCharacterSheet("");
       setCharRefUrl("");
       setRegenerateExistingStory(false);
+      setResumeMissingPanels(false);
+      resumeStartedRef.current = false;
       setForceRegenerateRef(false);
       setPanels([]);
       setSelectedPanel(0);
@@ -191,6 +196,18 @@ export default function Editor() {
               d.characterSheet || "",
               d.characterRefUrl || "",
             );
+            return;
+          }
+
+          // A sync-mode generation has no server job to reattach to. Its
+          // completed panels are persisted individually, so resume only the
+          // unfinished ones after this state has reached React.
+          if (shouldResumePanelGeneration(d.status, d.panels || [])) {
+            resumeStartedRef.current = false;
+            setStep("result");
+            setIsGeneratingImages(true);
+            setGenerationProgress("Resuming remaining panel images...");
+            setResumeMissingPanels(true);
             return;
           }
 
@@ -373,22 +390,23 @@ export default function Editor() {
       });
     });
 
-  const handleGenerate = async (options?: { reuseExistingText?: boolean }) => {
+  const handleGenerate = async (options?: { reuseExistingText?: boolean; resumeMissingImages?: boolean }) => {
     // Guard: prevent duplicate submissions (double-click / race)
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
 
     try {
     const reuseExistingText = options?.reuseExistingText === true;
+    const resumeMissingImages = options?.resumeMissingImages === true;
     const reusablePanels: Panel[] = panels
       .filter((p) => (p.description || "").trim().length > 0)
       .map((p, idx) => ({
         ...p,
         number: p.number ?? idx + 1,
         narration: p.narration ?? "",
-        imageUrl: undefined,
-        error: undefined,
-        generationMeta: undefined,
+        imageUrl: resumeMissingImages ? p.imageUrl : undefined,
+        error: resumeMissingImages ? p.error : undefined,
+        generationMeta: resumeMissingImages ? p.generationMeta : undefined,
       }));
     const shouldReuseText = reuseExistingText && reusablePanels.length > 0;
 
@@ -524,19 +542,21 @@ export default function Editor() {
       // Preferred path: hand rendering to the server-side queue. Returns null
       // when the deployment cannot queue, in which case we fall through to the
       // client-driven loop below.
-      const queuedJobId = await startGenerationJob(
-        {
-          panels: storyPanels.map((p) => ({ description: p.description })),
-          style: selectedStyle,
-          comicId: activeComicId,
-          draftId: savedDraftId,
-          characterSheet: csText || undefined,
-          characterRefUrl: charRefUrlCaptured || undefined,
-        },
-        // Stable across retries of this same submit, so a double click or a
-        // dropped response attaches to the original job instead of paying twice.
-        `${savedDraftId}-${storyPanels.length}-${title}`,
-      );
+      const queuedJobId = resumeMissingImages
+        ? null
+        : await startGenerationJob(
+            {
+              panels: storyPanels.map((p) => ({ description: p.description })),
+              style: selectedStyle,
+              comicId: activeComicId,
+              draftId: savedDraftId,
+              characterSheet: csText || undefined,
+              characterRefUrl: charRefUrlCaptured || undefined,
+            },
+            // Stable across retries of this same submit, so a double click or a
+            // dropped response attaches to the original job instead of paying twice.
+            `${savedDraftId}-${storyPanels.length}-${title}`,
+          );
 
       if (queuedJobId) {
         await watchQueuedGeneration(queuedJobId, storyPanels, csText, charRefUrlCaptured);
@@ -544,20 +564,30 @@ export default function Editor() {
       }
 
       const panelsWithImages = [...storyPanels] as Panel[];
+      const panelIndicesToGenerate = resumeMissingImages
+        ? missingPanelIndices(panelsWithImages)
+        : panelsWithImages.map((_, index) => index);
+
+      if (panelIndicesToGenerate.length === 0) {
+        await saveDraft({ panels: panelsWithImages, characterSheet: csText, characterRefUrl: charRefUrlCaptured, status: "COMPLETED" } as any);
+        setIsGeneratingImages(false);
+        setGenerationProgress("");
+        return;
+      }
 
       // Generate panels in parallel batches of 2 to cut wait time ~in half.
       // Using 2 (not 3+) to stay within OpenAI rate limits on free-tier.
       const CONCURRENCY = 2;
-      for (let batchStart = 0; batchStart < panelsWithImages.length; batchStart += CONCURRENCY) {
-        const batchEnd = Math.min(batchStart + CONCURRENCY, panelsWithImages.length);
-        const batchIndices = Array.from({ length: batchEnd - batchStart }, (_, k) => batchStart + k);
+      for (let batchStart = 0; batchStart < panelIndicesToGenerate.length; batchStart += CONCURRENCY) {
+        const batchIndices = panelIndicesToGenerate.slice(batchStart, batchStart + CONCURRENCY);
+        const batchEnd = batchStart + batchIndices.length;
 
         // Mark all panels in this batch as loading
         for (const i of batchIndices) {
           setPanelLoading((prev) => ({ ...prev, [panelsWithImages[i].number]: true }));
         }
         setGenerationProgress(
-          `Generating images ${batchStart + 1}–${batchEnd} of ${panelsWithImages.length}…`,
+          `Generating images ${batchStart + 1}–${batchEnd} of ${panelIndicesToGenerate.length} remaining…`,
         );
 
         // Fire all requests in this batch concurrently
@@ -606,6 +636,14 @@ export default function Editor() {
 
         // Update state after each batch so user sees incremental results
         setPanels([...panelsWithImages]);
+        // The browser can close at any time. Persist every completed batch so
+        // reopening continues from this exact point rather than starting over.
+        await saveDraft({
+          panels: panelsWithImages,
+          characterSheet: csText,
+          characterRefUrl: charRefUrlCaptured,
+          status: "GENERATING",
+        } as any);
       }
 
       // Mark draft as completed
@@ -636,6 +674,17 @@ export default function Editor() {
       isSubmittingRef.current = false;
     }
   };
+
+  // The loader sets this only for a saved, unfinished sync-mode draft. Waiting
+  // for this effect ensures the draft's panels have reached state before we
+  // calculate which image requests remain.
+  useEffect(() => {
+    if (!resumeMissingPanels || resumeStartedRef.current) return;
+
+    resumeStartedRef.current = true;
+    setResumeMissingPanels(false);
+    void handleGenerate({ reuseExistingText: true, resumeMissingImages: true });
+  }, [resumeMissingPanels]);
 
   const handleRetryPanel = async (panel: Panel) => {
     const panelIndex = panel.number - 1;
