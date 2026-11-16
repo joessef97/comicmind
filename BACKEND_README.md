@@ -1,260 +1,191 @@
-# ComicMind Backend API
+# ComicMind Backend
 
-Backend implementation for ComicMind: AI Comic Book Creator Webservice
+ComicMind is a TypeScript and Express backend for creating, saving, and sharing AI-generated comics. MongoDB stores application records through Mongoose. Generated image files are stored with Cloudinary when configured, with local disk storage as a fallback.
 
-## Features
+## What the backend provides
 
-- ✅ User authentication with JWT
-- ✅ Story generation using OpenAI GPT-4
-- ✅ Image generation using DALL-E 3
-- ✅ Character-consistent prompts
-- ✅ Fault-tolerant panel generation with retry mechanism
-- ✅ Content safety filtering
-- ✅ Comic CRUD operations
-- ✅ User gallery 
-- ✅ In-memory storage (easily replaceable with PostgreSQL)
+- JWT-based registration, login, current-user, and password-reset endpoints
+- AI story and panel-image generation, including character-reference support
+- MongoDB persistence for users, password resets, comics, drafts, ratings, and comments
+- Public comic browsing, publishing, sharing, and download tracking
+- Content-safety checks, rate limiting, and per-user comic access
+- PDF and PNG comic downloads
+- Cloudinary image storage, with local disk fallback
 
-## Technology Stack
+## Stack
 
-- **Node.js** + **Express.js** - Backend framework
-- **TypeScript** - Type-safe development
-- **OpenAI API** - Story and image generation
-- **JWT** - Authentication
-- **bcrypt** - Password hashing
-- **Drizzle ORM** - Database schema management
+- Node.js, Express 5, and TypeScript
+- MongoDB and Mongoose
+- OpenAI for story and image generation
+- JWT and bcrypt for authentication
+- Cloudinary or local disk for generated images
+- Vitest and Supertest for tests
 
-## Setup
+## Local setup
 
-1. Install dependencies:
-```bash
+Use Node.js 20 or newer and a MongoDB instance, either local or hosted.
+
+Install dependencies:
+
+~~~bash
 npm install
-```
+~~~
 
-2. Create `.env` file:
-```bash
-cp .env.example .env
-```
+Create a .env file in the repository root and set the required values:
 
-3. Add your OpenAI API key to `.env`:
-```
-OPENAI_API_KEY=sk-...
-JWT_SECRET=your-secret-key
-```
+~~~dotenv
+NODE_ENV=development
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/comicmind
+JWT_SECRET=replace-with-a-long-random-secret
+OPENAI_API_KEY=your-openai-api-key
+~~~
 
-4. Run development server:
-```bash
+Optional settings:
+
+~~~dotenv
+OPENAI_IMAGE_MODEL=gpt-image-2
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+APP_BASE_URL=http://localhost:5000
+~~~
+
+Cloudinary settings enable hosted image storage. Without them, the backend uses local disk storage under the uploads directory. SMTP settings are needed for password-reset email delivery.
+
+Start the full development server:
+
+~~~bash
 npm run dev
-```
+~~~
 
-The server will start on `http://localhost:5000`
+The API listens on port 5000 by default. In development, the server also starts the Vite frontend. Set PORT to change the API port.
 
-## API Endpoints
+## API overview
+
+Protected endpoints use a bearer token:
+
+~~~http
+Authorization: Bearer <token>
+~~~
 
 ### Authentication
 
-#### Register
-```http
-POST /api/auth/register
-Content-Type: application/json
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | /api/auth/register | Public | Create an account |
+| POST | /api/auth/login | Public | Sign in and receive a token |
+| GET | /api/auth/me | Authenticated | Get the current user |
+| POST | /api/auth/forgot-password | Public | Request a password-reset email |
+| POST | /api/auth/reset-password | Public | Set a new password with the emailed token |
 
+Registration requires a username, email, and password:
+
+~~~json
 {
-  "username": "user123",
-  "password": "password123"
+  "username": "reader123",
+  "email": "reader@example.com",
+  "password": "a-long-password"
 }
-```
+~~~
 
-#### Login
-```http
-POST /api/auth/login
-Content-Type: application/json
+Login uses username and password. Passwords must be 8 to 128 characters. JWTs expire after seven days.
 
-{
-  "username": "user123",
-  "password": "password123"
-}
-```
+### Comics and generation
 
-#### Get Current User
-```http
-GET /api/auth/me
-Authorization: Bearer <token>
-```
+Comic endpoints are mounted under /api/comics. The main operations include:
 
-### Comic Generation
+- POST /api/comics/generate-story — create a six-panel story from a title, idea, and art style
+- POST /api/comics/generate-character-ref — create a character reference image
+- POST /api/comics/generate-images — generate panel images
+- POST /api/comics/retry-panel — retry one failed panel
+- POST /api/comics — save a comic
+- GET /api/comics — list the authenticated user's comics
+- GET /api/comics/:id — read one of the user's comics
+- PUT /api/comics/:id — update a comic
+- DELETE /api/comics/:id — delete a comic
+- PATCH /api/comics/:id/publish — publish or unpublish a comic
+- GET /api/comics/public — browse published comics
+- GET /api/comics/:id/download?format=pdf — download a comic as PDF or PNG
 
-#### Generate Story
-```http
-POST /api/comics/generate-story
-Authorization: Bearer <token>
-Content-Type: application/json
+Generation and write endpoints require authentication. Public browse and download routes do not require a token. Comic and panel input is validated and moderated by the backend.
 
-{
-  "title": "The Hero's Journey",
-  "idea": "A young hero discovers magical powers",
-  "style": "anime"
-}
-```
+### Generation jobs
 
-Styles: `anime`, `realistic`, `cartoon`, `noir`, `comic`
+| Method | Path | Purpose |
+|---|---|---|
+| POST | /api/jobs/generate | Start panel generation and receive a job ID |
+| GET | /api/jobs/active | Find the signed-in user's active generation job |
+| GET | /api/jobs/:id | Read job state and per-panel results |
+| GET | /api/jobs/:id/events | Receive progress updates over server-sent events |
 
-#### Generate Panel Images
-```http
-POST /api/comics/generate-images
-Authorization: Bearer <token>
-Content-Type: application/json
+Generation job progress is persisted in MongoDB. The events endpoint lets the browser follow progress and reconnect to an existing job.
+### Drafts, ratings, and comments
 
-{
-  "panels": [...],
-  "style": "anime"
-}
-```
+| Method | Path | Purpose |
+|---|---|---|
+| POST | /api/drafts | Create a draft |
+| GET | /api/drafts | List the signed-in user's drafts |
+| GET | /api/drafts/:id | Read a draft |
+| PUT | /api/drafts/:id | Update a draft |
+| DELETE | /api/drafts/:id | Delete a draft |
+| DELETE | /api/drafts/stale | Clean up stale drafts |
+| POST | /api/comics/:id/rating | Add or update a rating |
+| GET | /api/comics/:id/ratings | List ratings |
+| GET | /api/comics/:id/ratings/summary | Get the average and count |
+| GET | /api/comics/:id/rating/mine | Get the current user's rating |
+| POST | /api/comics/:id/comments | Add a comment |
+| GET | /api/comics/:id/comments | List comments |
+| DELETE | /api/comments/:id | Delete the current user's comment |
 
-#### Retry Single Panel
-```http
-POST /api/comics/retry-panel
-Authorization: Bearer <token>
-Content-Type: application/json
+Draft writes, ratings, and comment creation or deletion require authentication.
 
-{
-  "panel": {...},
-  "style": "anime"
-}
-```
+## Data and image storage
 
-### Comic Management
+The storage adapter in backend/src/services/storage.service.ts uses Mongoose models. MongoDB stores user accounts, password-reset records, comics and their panel metadata, drafts, ratings, and comments. Comic records use MongoDB ObjectIds, and panel data is embedded in comic documents.
 
-#### Save Comic
-```http
-POST /api/comics
-Authorization: Bearer <token>
-Content-Type: application/json
+Image files are stored separately from those MongoDB records. The image-storage service uses Cloudinary when configured and otherwise writes files to local disk. Comic and panel data keep the corresponding image URLs and storage identifiers.
 
-{
-  "title": "My Comic",
-  "style": "anime",
-  "idea": "...",
-  "panels": [...]
-}
-```
+## Security and validation
 
-#### Get All User Comics
-```http
-GET /api/comics?limit=10&offset=0
-Authorization: Bearer <token>
-```
+- Passwords are hashed with bcrypt.
+- Authenticated requests use signed JWT bearer tokens.
+- Comic and draft access is scoped to the owning user.
+- Request rate limits apply to authentication and AI-generation routes.
+- Content-safety middleware checks user input and edited panels.
+- Password-reset tokens are stored as hashes and expire after 45 minutes.
+- API errors are returned as JSON with a message field.
 
-#### Get Single Comic
-```http
-GET /api/comics/:id
-Authorization: Bearer <token>
-```
+## Project layout
 
-#### Update Comic
-```http
-PUT /api/comics/:id
-Authorization: Bearer <token>
-Content-Type: application/json
+~~~text
+backend/src/
+  config/       MongoDB connection
+  middleware/   authentication, rate limits, content safety, translation, errors
+  modules/      auth, comics, drafts, comments, ratings, users
+  services/     Mongo storage, AI, images, email, translation, comic downloads
+  utils/        content filtering and logging
+shared/         request and domain types shared with the frontend
+tests/          unit and API tests
+~~~
 
-{
-  "title": "Updated Title",
-  "panels": [...]
-}
-```
+## Build and checks
 
-#### Delete Comic
-```http
-DELETE /api/comics/:id
-Authorization: Bearer <token>
-```
-
-## Content Safety
-
-The backend includes a content filter that blocks inappropriate words in:
-- Comic titles
-- Story ideas
-
-Blocked content returns:
-```json
-{
-  "message": "Your content contains inappropriate or unsafe words. Please modify your input."
-}
-```
-
-## Panel Structure
-
-Each panel contains:
-```typescript
-{
-  "number": 1,
-  "description": "Visual scene description",
-  "dialogue": "Character speech",
-  "narration": "Narrative text",
-  "imageUrl": "https://...",  // Added after generation
-  "error": "error message"     // Present if generation failed
-}
-```
-
-## Error Handling
-
-- Failed panel generation doesn't stop the process
-- Each panel is generated independently
-- Failed panels can be retried individually
-- All errors return JSON with `{ message: "..." }`
-
-## Storage
-
-Currently uses in-memory storage (`MemStorage`).
-
-To use PostgreSQL:
-1. Set `DATABASE_URL` in `.env`
-2. Run migrations: `npm run db:push`
-3. Implement `DBStorage` class in `backend/storage.ts`
-
-## Security
-
-- Passwords hashed with bcrypt (10 salt rounds)
-- JWT tokens expire in 7 days
-- Protected routes require authentication
-- Content safety filtering on input
-- User isolation for comics (users only see their own)
-
-## Production Deployment
-
-1. Set environment variables:
-   - `OPENAI_API_KEY`
-   - `JWT_SECRET` (strong random key)
-   - `NODE_ENV=production`
-   
-2. Build:
-```bash
-npm run build
-```
-
-3. Start:
-```bash
-npm start
-```
-
-## Development
-
-Build and check types:
-```bash
+~~~bash
 npm run check
-```
+npm test
+npm run test:api
+npm run build
+npm start
+~~~
 
-## Project Structure
-
-```
-backend/
-├── index.ts          # Express app setup
-├── routes.ts         # API routes
-├── auth.ts           # Authentication & JWT
-├── ai-service.ts     # OpenAI integration
-├── content-filter.ts # Safety filtering
-├── storage.ts        # Data storage interface
-├── static.ts         # Static file serving
-└── vite.ts           # Vite dev server integration
-```
+npm run dev is the local development command. npm start runs the production build.
 
 ## License
 
