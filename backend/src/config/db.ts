@@ -20,3 +20,7 @@ export async function connectDB(): Promise<void> {
     log("MongoDB disconnected", "database");
   });
 }
+
+export async function disconnectDB(): Promise<void> {
+  await mongoose.disconnect();
+}

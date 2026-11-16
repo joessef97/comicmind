@@ -12,14 +12,12 @@ const httpServer = createServer(app);
   // Connect to MongoDB
   await connectDB();
 
-  // Render's free tier runs a single process, so the worker can be hosted
-  // inside the API instead of being deployed separately. docker-compose runs
-  // it as its own process (see backend/src/worker.ts).
-  if (process.env.WORKER_INLINE === "true") {
+  // Run the worker in this process by default. Set WORKER_INLINE=false only
+  // when a separate `npm run worker` process is running against the same DB.
+  if (process.env.WORKER_INLINE !== "false") {
     const { startPanelWorker } = await import("./jobs/panel.worker");
-    if (startPanelWorker()) {
-      log("panel worker running in-process (WORKER_INLINE=true)");
-    }
+    startPanelWorker();
+    log("MongoDB panel worker running in-process");
   }
 
   // Error handler (must come after routes, before vite/static catch-all)

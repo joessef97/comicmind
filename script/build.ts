@@ -44,7 +44,7 @@ async function buildAll() {
     outfile: "dist/index.cjs",
   });
 
-  // Standalone worker entrypoint, used when the queue runs as its own process
+  // Standalone worker entrypoint, used when panel processing runs as its own process
   // rather than inline in the API (see backend/src/worker.ts).
   await esbuild({
     ...shared,

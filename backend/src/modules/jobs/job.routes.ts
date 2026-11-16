@@ -7,8 +7,7 @@ import { streamGenerationJob } from "./job.events";
 
 const router = Router();
 
-// Panels are moderated before they reach the queue: once work is enqueued it
-// runs without a request context to reject it.
+// Panels are moderated before they are persisted as background work.
 router.post(
   "/generate",
   authenticateToken,

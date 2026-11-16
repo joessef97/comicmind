@@ -1,7 +1,7 @@
 /**
- * The queued client must degrade quietly. If any of this throws or reports a
- * false positive, the editor either crashes or silently stops generating on
- * the deployment that cannot queue — which is the live one today.
+ * The background-job client must degrade quietly. If any of this throws or reports a
+ * false positive, the editor either crashes or silently stops generating when
+ * a job request fails.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";

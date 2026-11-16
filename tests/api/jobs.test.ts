@@ -4,23 +4,42 @@ import { loadTestApp } from "../helpers/test-app";
 import { makeTestToken } from "../helpers/auth";
 import { testMocks } from "../helpers/mock-modules";
 
+const jobMocks = vi.hoisted(() => ({
+  createJob: vi.fn(),
+  findActiveJob: vi.fn(),
+  getJob: vi.fn(),
+  getJobPanels: vi.fn(),
+  isTerminal: (status: string) => ["succeeded", "partial", "failed", "cancelled"].includes(status),
+}));
+
 vi.mock("../../backend/src/services/storage.service", () => ({ storage: testMocks.storage }));
 vi.mock("../../backend/src/services/ai.service", () => testMocks.aiService);
 vi.mock("../../backend/src/services/image-storage", () => testMocks.imageStorage);
 vi.mock("../../backend/src/modules/auth/auth.model", () => ({ UserModel: testMocks.userModel }));
+vi.mock("../../backend/src/jobs/job.service", () => jobMocks);
 
 describe("generation job endpoints", () => {
   let app: Awaited<ReturnType<typeof loadTestApp>>;
   const token = makeTestToken("user-1");
+  const job = {
+    id: "6f1c9f0e6a1a4a3e9f0e2b7c",
+    userId: "user-1",
+    status: "queued",
+    totalPanels: 1,
+    completedPanels: 0,
+    comicId: null,
+    draftId: null,
+  };
 
   beforeAll(async () => {
     app = await loadTestApp();
   });
 
   beforeEach(() => {
-    delete process.env.GENERATION_MODE;
-    delete process.env.REDIS_URL;
-    delete process.env.DATABASE_URL;
+    jobMocks.createJob.mockResolvedValue({ job, reused: false });
+    jobMocks.findActiveJob.mockResolvedValue(null);
+    jobMocks.getJob.mockResolvedValue(null);
+    jobMocks.getJobPanels.mockResolvedValue([]);
   });
 
   it("rejects unauthenticated callers", async () => {
@@ -28,57 +47,44 @@ describe("generation job endpoints", () => {
     expect(response.status).toBe(401);
   });
 
-  it("reports sync mode when queued generation is not enabled", async () => {
-    // No REDIS_URL and no DATABASE_URL: the deployment cannot queue, and says
-    // so rather than accepting work it will never run.
+  it("persists generation work in MongoDB and returns a job id", async () => {
     const response = await request(app)
       .post("/api/jobs/generate")
       .set("Authorization", `Bearer ${token}`)
+      .set("Idempotency-Key", "request-1")
       .send({
         panels: [{ description: "a rooftop chase" }],
         style: "noir",
       });
 
-    expect(response.status).toBe(503);
-    expect(response.body.mode).toBe("sync");
+    expect(response.status).toBe(202);
+    expect(response.body).toMatchObject({ jobId: job.id, status: "queued", totalPanels: 1 });
+    expect(jobMocks.createJob).toHaveBeenCalledWith(expect.objectContaining({
+      userId: "user-1",
+      totalPanels: 1,
+      idempotencyKey: "request-1",
+      panelInputs: [{
+        prompt: "a rooftop chase",
+        style: "noir",
+        characterSheet: undefined,
+        characterRefUrl: undefined,
+      }],
+    }));
   });
 
-  it("does not queue when only half the infrastructure is present", async () => {
-    // Redis without the ledger would leave rendered panels with nowhere to
-    // record their outcome, so this must not be treated as queue-capable.
-    process.env.GENERATION_MODE = "queue";
-    process.env.REDIS_URL = "redis://localhost:6379";
-
+  it("returns the existing job when an idempotency key is reused", async () => {
+    jobMocks.createJob.mockResolvedValue({ job, reused: true });
     const response = await request(app)
       .post("/api/jobs/generate")
       .set("Authorization", `Bearer ${token}`)
-      .send({ panels: [{ description: "x" }], style: "noir" });
-
-    expect(response.status).toBe(503);
-  });
-
-  it("returns null for an active job when the ledger is disabled", async () => {
-    const response = await request(app)
-      .get("/api/jobs/active")
-      .set("Authorization", `Bearer ${token}`);
+      .set("Idempotency-Key", "request-1")
+      .send({ panels: [{ description: "a rooftop chase" }], style: "noir" });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ job: null });
-  });
-
-  it("404s an unknown job rather than revealing whether it exists", async () => {
-    const response = await request(app)
-      .get("/api/jobs/6f1c9f0e-6a1a-4a3e-9f0e-2b7c1d8e5a44")
-      .set("Authorization", `Bearer ${token}`);
-
-    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({ jobId: job.id, reused: true });
   });
 
   it("requires panels and a style", async () => {
-    process.env.GENERATION_MODE = "queue";
-    process.env.REDIS_URL = "redis://localhost:6379";
-    process.env.DATABASE_URL = "postgres://localhost:5432/none";
-
     const missingPanels = await request(app)
       .post("/api/jobs/generate")
       .set("Authorization", `Bearer ${token}`)
@@ -90,5 +96,22 @@ describe("generation job endpoints", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ panels: [{ description: "x" }] });
     expect(missingStyle.status).toBe(400);
+  });
+
+  it("returns null for a user without an active job", async () => {
+    const response = await request(app)
+      .get("/api/jobs/active")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ job: null });
+  });
+
+  it("404s an unknown job rather than revealing whether it exists", async () => {
+    const response = await request(app)
+      .get(`/api/jobs/${job.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(404);
   });
 });

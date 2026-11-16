@@ -1,13 +1,6 @@
-/**
- * Panel rendering worker.
- *
- * Deliberately thin: it owns *when* and *how often* a panel is rendered, not
- * how. Image generation and persistence are the same functions the
- * synchronous path uses, so the two paths cannot drift apart.
- */
+/** MongoDB-backed worker for independent comic panel generation. */
 
 import crypto from "crypto";
-import { Worker, type ConnectionOptions, type Job } from "bullmq";
 import { getImageProvider } from "../services/ai.service";
 import {
   isPersistedUrl,
@@ -16,36 +9,34 @@ import {
 } from "../services/image-storage";
 import { storage } from "../services/storage.service";
 import * as jobService from "./job.service";
-import {
-  PANEL_QUEUE_NAME,
-  getRedisConnection,
-  queuePrefix,
-  type PanelJobData,
-} from "./queue";
+import type { ClaimedPanel } from "./job.service";
 
 const DEFAULT_CONCURRENCY = 2;
+const POLL_INTERVAL_MS = 500;
 
-/**
- * Renders one panel and writes the result to Mongo (content) and Postgres
- * (ledger). Throwing propagates to BullMQ, which applies the configured
- * backoff and retries; only the final failed attempt is recorded as failed,
- * so the ledger reflects outcomes rather than every intermediate stumble.
- */
-export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: string }> {
-  const { jobId, userId, comicId, draftId, panelIndex, prompt, style } = job.data;
+export interface PanelWorkerHandle {
+  close(): Promise<void>;
+}
 
-  await jobService.markRunning(jobId);
+/** Generate one claimed panel and persist its result in MongoDB. */
+export async function renderPanel(panel: ClaimedPanel): Promise<void> {
+  const { jobId, userId, comicId, draftId, panelNumber, prompt, style, leaseToken } = panel;
+  const heartbeat = setInterval(() => {
+    void jobService.extendPanelLease(jobId, panelNumber, leaseToken).catch((err) => {
+      console.error(`[worker] Could not extend lease for ${jobId}/${panelNumber}:`, err);
+    });
+  }, 60_000);
+  heartbeat.unref?.();
 
   try {
-    const referenceImage = await downloadCharacterReference(job.data.characterRefUrl);
-
+    const referenceImage = await downloadCharacterReference(panel.characterRefUrl);
     const provider = getImageProvider();
     const result = await provider.generateImage({
       prompt,
       style,
-      panelNumber: panelIndex + 1,
+      panelNumber: panelNumber + 1,
       size: "1024x1024",
-      characterSheet: job.data.characterSheet || undefined,
+      characterSheet: panel.characterSheet || undefined,
       referenceImage,
     });
 
@@ -54,13 +45,13 @@ export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: s
     let storagePublicId: string | undefined;
 
     if (result.imageBuffer) {
-      const uploaded = await persistImageBuffer(result.imageBuffer, namespace, `panel-${panelIndex}`);
+      const uploaded = await persistImageBuffer(result.imageBuffer, namespace, `panel-${panelNumber}`);
       if (uploaded) {
         finalUrl = uploaded.url;
         storagePublicId = uploaded.publicId;
       }
     } else if (finalUrl && !isPersistedUrl(finalUrl)) {
-      const uploaded = await persistImage(finalUrl, namespace, `panel-${panelIndex}`);
+      const uploaded = await persistImage(finalUrl, namespace, `panel-${panelNumber}`);
       if (uploaded) {
         finalUrl = uploaded.url;
         storagePublicId = uploaded.publicId;
@@ -68,7 +59,7 @@ export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: s
     }
 
     if (comicId) {
-      await writePanelToComic(comicId, userId, panelIndex, {
+      await writePanelToComic(comicId, userId, panelNumber, {
         imageUrl: finalUrl,
         storagePublicId,
         generationMeta: result.meta,
@@ -76,47 +67,51 @@ export async function renderPanel(job: Job<PanelJobData>): Promise<{ imageUrl: s
     }
 
     if (draftId) {
-      await writePanelToDraft(draftId, userId, panelIndex, {
+      await writePanelToDraft(draftId, userId, panelNumber, {
         imageUrl: finalUrl,
         storagePublicId,
         generationMeta: result.meta,
       });
     }
 
-    await jobService.recordPanelResult(jobId, panelIndex, {
-      status: "succeeded",
-      imageUrl: finalUrl,
-    });
+    await jobService.recordPanelResult(
+      jobId,
+      panelNumber,
+      { status: "succeeded", imageUrl: finalUrl, attempts: panel.attempts },
+      leaseToken,
+    );
     await syncTerminalDraftStatus(draftId, userId, await jobService.finalizeIfComplete(jobId));
-
-    return { imageUrl: finalUrl };
   } catch (err: any) {
     const message = err?.message || "Panel generation failed";
-    const isFinalAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
-
-    if (isFinalAttempt) {
-      // Retries are exhausted: this panel is genuinely lost. Record it and let
-      // the job close as `partial` so the siblings are still delivered.
-      await jobService.recordPanelResult(jobId, panelIndex, {
-        status: "failed",
-        error: message,
-      });
-      await syncTerminalDraftStatus(draftId, userId, await jobService.finalizeIfComplete(jobId));
-      console.error(`[worker] Panel ${panelIndex} of job ${jobId} failed permanently: ${message}`);
-    } else {
-      console.warn(
-        `[worker] Panel ${panelIndex} of job ${jobId} attempt ${job.attemptsMade + 1} failed, retrying: ${message}`,
+    if (panel.attempts >= panel.maxAttempts) {
+      await jobService.recordPanelResult(
+        jobId,
+        panelNumber,
+        { status: "failed", error: message, attempts: panel.attempts },
+        leaseToken,
       );
+      await syncTerminalDraftStatus(draftId, userId, await jobService.finalizeIfComplete(jobId));
+      console.error(`[worker] Panel ${panelNumber} of job ${jobId} failed permanently: ${message}`);
+      return;
     }
 
-    throw err;
+    const baseDelay = Number.parseInt(process.env.PANEL_RETRY_DELAY_MS || "", 10) || 5_000;
+    const retryDelay = baseDelay * 2 ** Math.max(0, panel.attempts - 1);
+    await jobService.releasePanelForRetry(
+      jobId,
+      panelNumber,
+      leaseToken,
+      message,
+      new Date(Date.now() + retryDelay),
+    );
+    console.warn(
+      `[worker] Panel ${panelNumber} of job ${jobId} attempt ${panel.attempts} failed; retrying in ${retryDelay}ms: ${message}`,
+    );
+  } finally {
+    clearInterval(heartbeat);
   }
 }
 
-/**
- * The worker, rather than the open browser tab, owns durable draft progress.
- * That makes every completed panel visible after a close/reopen interruption.
- */
 async function writePanelToDraft(
   draftId: string,
   userId: string,
@@ -153,7 +148,6 @@ async function downloadCharacterReference(url?: string): Promise<Buffer | undefi
     }
     return Buffer.from(await response.arrayBuffer());
   } catch (err) {
-    // The reference sheet is a consistency aid, not a requirement.
     console.warn("[worker] Could not download character reference (continuing without):", err);
     return undefined;
   }
@@ -180,26 +174,42 @@ async function writePanelToComic(
 }
 
 /**
- * Starts the worker. Returns null when Redis is unavailable so the caller can
- * carry on without a queue.
+ * Starts polling MongoDB for ready panels. Atomic panel claims and expiring
+ * leases let another worker recover work after a process exits unexpectedly.
  */
-export function startPanelWorker(): Worker<PanelJobData> | null {
-  const connection = getRedisConnection();
-  if (!connection) return null;
+export function startPanelWorker(): PanelWorkerHandle {
+  let running = true;
+  const concurrency = Number.parseInt(process.env.PANEL_WORKER_CONCURRENCY || "", 10) || DEFAULT_CONCURRENCY;
 
-  const concurrency =
-    Number.parseInt(process.env.PANEL_WORKER_CONCURRENCY || "", 10) || DEFAULT_CONCURRENCY;
+  const loop = async (index: number) => {
+    while (running) {
+      try {
+        if (index === 0) await jobService.failExpiredPanels();
+        const panel = await jobService.claimNextPanel();
+        if (panel) {
+          await renderPanel(panel);
+          continue;
+        }
+      } catch (err) {
+        console.error("[worker] MongoDB panel polling failed:", err);
+        await delay(2_000);
+        continue;
+      }
+      await delay(POLL_INTERVAL_MS);
+    }
+  };
 
-  const worker = new Worker<PanelJobData>(PANEL_QUEUE_NAME, renderPanel, {
-    connection: connection as unknown as ConnectionOptions,
-    prefix: queuePrefix(),
-    concurrency,
-  });
+  const loops = Array.from({ length: Math.max(1, concurrency) }, (_, index) => loop(index));
+  console.log(`[worker] MongoDB panel worker started (concurrency ${Math.max(1, concurrency)})`);
 
-  worker.on("failed", (job, err) => {
-    console.error(`[worker] Job ${job?.id} failed: ${err.message}`);
-  });
+  return {
+    async close() {
+      running = false;
+      await Promise.all(loops);
+    },
+  };
+}
 
-  console.log(`[worker] Panel worker started (concurrency ${concurrency})`);
-  return worker;
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

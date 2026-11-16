@@ -66,6 +66,7 @@ npm run dev
 ~~~
 
 The API listens on port 5000 by default. In development, the server also starts the Vite frontend. Set PORT to change the API port.
+The MongoDB-backed panel worker runs in the API process by default. To use a separate worker process, set WORKER_INLINE=false and run npm run worker in another terminal.
 
 ## API overview
 
@@ -125,7 +126,7 @@ Generation and write endpoints require authentication. Public browse and downloa
 | GET | /api/jobs/:id | Read job state and per-panel results |
 | GET | /api/jobs/:id/events | Receive progress updates over server-sent events |
 
-Generation job progress is persisted in MongoDB. The events endpoint lets the browser follow progress and reconnect to an existing job.
+Generation job requests, panel work, progress, and retry state are persisted in MongoDB. The events endpoint lets the browser follow progress and reconnect to an existing job.
 ### Drafts, ratings, and comments
 
 | Method | Path | Purpose |

@@ -33,7 +33,7 @@ let topRatedCache: { expiresAt: number; payload: any } | null = null;
 
 /**
  * Creates a generation job for this request, honouring an Idempotency-Key
- * header when the client sends one. Never throws: a ledger failure must not
+ * header when the client sends one. Never throws: job tracking must not
  * cost the user a story they already paid to generate.
  */
 async function openGenerationJob(req: AuthRequest, totalPanels: number): Promise<string | null> {
@@ -56,10 +56,10 @@ async function openGenerationJob(req: AuthRequest, totalPanels: number): Promise
 }
 
 /**
- * Mirrors a finished panel into the ledger and closes the job out once the
+ * Mirrors a finished panel into the MongoDB job and closes it out once the
  * last panel lands. Best-effort for the same reason as openGenerationJob.
  */
-async function recordPanelInLedger(
+async function recordPanelJobProgress(
   jobId: unknown,
   panelIndex: number,
   result: { status: "succeeded" | "failed"; imageUrl?: string | null; error?: string | null },
@@ -190,9 +190,8 @@ export async function generateStoryHandler(req: AuthRequest, res: Response) {
       }
     } catch (_) { /* best-effort post-gen check */ }
 
-    // Open a ledger entry for the panel rendering that follows. Bookkeeping
-    // only — the client still drives generation today. A null jobId simply
-    // means the ledger is disabled, and the client carries on without it.
+    // Open the MongoDB job record for the panel rendering that follows. The
+    // synchronous client path can still proceed if recording this is unavailable.
     const jobId = await openGenerationJob(req, panels.length);
 
     return res.status(200).json({
@@ -503,7 +502,7 @@ export async function generateSingleImage(req: AuthRequest, res: Response) {
       }
     }
 
-    await recordPanelInLedger(req.body?.jobId, panelIndex, {
+    await recordPanelJobProgress(req.body?.jobId, panelIndex, {
       status: "succeeded",
       imageUrl: finalUrl,
     });
@@ -519,7 +518,7 @@ export async function generateSingleImage(req: AuthRequest, res: Response) {
 
     const failedIndex = req.body?.panelIndex;
     if (typeof failedIndex === "number") {
-      await recordPanelInLedger(req.body?.jobId, failedIndex, {
+      await recordPanelJobProgress(req.body?.jobId, failedIndex, {
         status: "failed",
         error: message,
       });

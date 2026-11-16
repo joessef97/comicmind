@@ -100,7 +100,7 @@ npm run check     # tsc type check
 | `tests/api/auth.test.ts` | registration, login, password reset |
 | `tests/api/comics.test.ts` | comic CRUD and generation routes |
 | `tests/api/safety.test.ts` | content filter enforcement at the route layer |
-| `tests/api/jobs.test.ts` | job endpoints: auth, validation, sync-mode fallback |
+| `tests/api/jobs.test.ts` | MongoDB-backed job endpoints: auth, idempotency, validation |
 | `tests/content-filter.test.ts` | server-side filter rules |
 | `tests/client-content-filter.test.ts` | client-side filter parity |
 | `tests/draft-publish.test.ts` | draft → publish state transitions |
@@ -108,13 +108,9 @@ npm run check     # tsc type check
 | `tests/ratings-comments.test.ts` | rating aggregation and comment threads |
 | `tests/jobs/state-machine.test.ts` | legal and illegal job transitions |
 | `tests/jobs/worker.test.ts` | retry semantics: a failure is recorded only once retries are exhausted |
-| `tests/jobs/client-fallback.test.ts` | the client degrades quietly when queueing is unavailable |
-| `tests/jobs/ledger-optional.test.ts` | every ledger call is a no-op without a database |
-| `tests/jobs/worker-resume.integration.test.ts` | a stopped worker's queued panels are picked up by the next one |
-| `tests/jobs/tab-close.integration.test.ts` | generation survives the client vanishing, end to end through the real app |
-| `tests/jobs/*.integration.test.ts` | generation job lifecycle and worker recovery scenarios |
+| `tests/jobs/client-fallback.test.ts` | the editor falls back if a job request fails |
 
-The job tests cover persisted progress, panel retries, and recovery when a client disconnects or a worker restarts. Run the checks with npm test and npm run check.
+The worker stores progress and retry state in MongoDB. Run the checks with npm test and npm run check.
 
 Both the type check and the full suite run on every push via GitHub Actions.
 
@@ -152,9 +148,9 @@ Environment variables (see `backend/src/config/env.ts` for the full list and def
 | `OPENAI_API_KEY` | Story and image generation |
 | `CLOUDINARY_*` | Panel image hosting (cloud name, API key, secret) |
 | `SMTP_*` | Password-reset email delivery |
-| `WORKER_INLINE` | `true` to host the worker inside the API (single-process deployments) |
+| `WORKER_INLINE` | `false` only when running the worker as a separate process; defaults to inline |
 
-When running the panel worker as a separate process, start it with npm run worker.
+For a separate worker process, set `WORKER_INLINE=false` and run `npm run worker` in another terminal.
 
 Build and run in production mode:
 

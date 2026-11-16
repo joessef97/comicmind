@@ -2,16 +2,16 @@
  * Client for the queued generation pipeline.
  *
  * The browser stops being responsible for rendering panels: it asks the server
- * to start a job, then watches the ledger over SSE. Closing the tab no longer
+ * to start a job, then watches MongoDB-backed progress over SSE. Closing the tab no longer
  * cancels anything, and reopening the editor re-attaches to work in flight.
  *
- * Falls back cleanly when the deployment cannot queue — `startGenerationJob`
+ * Falls back cleanly if the server cannot start a job — `startGenerationJob`
  * returns null and the caller keeps using the synchronous path.
  */
 
 /**
  * Deliberately not apiRequest: that helper throws on any non-2xx, and a 503
- * here is a routine "this deployment cannot queue" that we want to inspect
+ * here is a routine "this job could not start" response that we want to inspect
  * rather than catch. It also has no way to set an Idempotency-Key header.
  */
 async function jobFetch(
@@ -63,8 +63,8 @@ export function isTerminalStatus(status: string): boolean {
 }
 
 /**
- * Starts a queued job. Returns null when the server reports it cannot queue
- * (503), which is the signal to fall back rather than an error worth showing.
+ * Starts a background job. Returns null when the server cannot start it,
+ * which is the signal to fall back rather than an error worth showing.
  *
  * The idempotency key means a retried submit — a flaky network, an impatient
  * double click — attaches to the original job instead of paying twice.

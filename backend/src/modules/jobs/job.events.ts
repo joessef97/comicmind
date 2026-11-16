@@ -1,11 +1,11 @@
 /**
  * Server-Sent Events for generation progress.
  *
- * Progress is read from the ledger rather than pushed from the worker. That
+ * Progress is read from MongoDB rather than pushed from the worker. That
  * costs one indexed read per connection per tick, and buys two things worth
  * more than the saving: a client that reconnects gets the true current state
  * instead of only the events it was present for, and the API needs no
- * pub/sub coupling to the worker process. The ledger is the single source of
+ * pub/sub coupling to the worker process. MongoDB is the single source of
  * truth for what happened; this endpoint just reads it out loud.
  */
 

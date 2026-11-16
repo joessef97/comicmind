@@ -307,7 +307,7 @@ export default function Editor() {
 
   // ── Generate comic with auto-draft ──────────────────────────────────
   /**
-   * Watches a queued job to completion, mapping ledger snapshots onto panel
+   * Watches a background job to completion, mapping MongoDB job snapshots onto panel
    * state. Resolves when the job reaches a terminal status.
    *
    * The browser is a spectator here: navigating away does not stop the work,
@@ -539,8 +539,8 @@ export default function Editor() {
       // Switch to "result" step early so users see panels appearing one-by-one
       setStep("result");
 
-      // Preferred path: hand rendering to the server-side queue. Returns null
-      // when the deployment cannot queue, in which case we fall through to the
+      // Preferred path: hand rendering to the MongoDB-backed server worker.
+      // Returns null on a request failure, in which case we fall through to the
       // client-driven loop below.
       const queuedJobId = resumeMissingImages
         ? null
