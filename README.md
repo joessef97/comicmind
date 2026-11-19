@@ -140,7 +140,11 @@ npm run check     # tsc type check
 | `tests/ratings-comments.test.ts` | rating aggregation and comment threads |
 | `tests/jobs/state-machine.test.ts` | legal and illegal job transitions |
 | `tests/jobs/worker.test.ts` | retry semantics: a failure is recorded only once retries are exhausted |
+| `tests/jobs/worker-resume.integration.test.ts` | expired MongoDB lease is reclaimed and the restarted worker persists the panel result |
+| `tests/jobs/tab-close.integration.test.ts` | generation completes in MongoDB after an SSE client disconnects |
 | `tests/jobs/client-fallback.test.ts` | the editor falls back if a job request fails |
+
+The two `*.integration.test.ts` suites use the real MongoDB configured by `MONGODB_URI`; they stub only image generation to avoid external API calls. GitHub Actions starts MongoDB 8.0 and runs them as part of `npm test`.
 
 The worker stores progress and retry state in MongoDB. Run the checks with npm test and npm run check.
 

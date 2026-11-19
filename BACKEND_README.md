@@ -128,6 +128,8 @@ Generation and write endpoints require authentication. Public browse and downloa
 
 Generation job requests, panel work, progress, and retry state are persisted in MongoDB. The events endpoint lets the browser follow progress and reconnect to an existing job.
 
+`npm test` includes two real-MongoDB integration suites: `tests/jobs/worker-resume.integration.test.ts` verifies recovery from an expired lease, and `tests/jobs/tab-close.integration.test.ts` verifies generation continues after an SSE client disconnects. Set `MONGODB_URI` to a test database when running locally; GitHub Actions provides MongoDB 8.0 for these tests.
+
 #### Queue and recovery details
 
 The queue is implemented with MongoDB polling. It does not use Redis, BullMQ, PostgreSQL, or a separate queue service. Each `GenerationJob` document contains job metadata (`userId`, `comicId`, `draftId`, `idempotencyKey`, status, timestamps and panel counters) and an embedded `panels` array. A panel stores its number, prompt, style, optional character reference data, status (`pending`, `running`, `succeeded`, or `failed`), attempt count and limit, plus result/error fields. While running or waiting for a retry it can also contain `leaseToken`, `leaseUntil`, or `nextAttemptAt`.
