@@ -127,6 +127,38 @@ Generation and write endpoints require authentication. Public browse and downloa
 | GET | /api/jobs/:id/events | Receive progress updates over server-sent events |
 
 Generation job requests, panel work, progress, and retry state are persisted in MongoDB. The events endpoint lets the browser follow progress and reconnect to an existing job.
+
+#### Queue and recovery details
+
+The queue is implemented with MongoDB polling. It does not use Redis, BullMQ, PostgreSQL, or a separate queue service. Each `GenerationJob` document contains job metadata (`userId`, `comicId`, `draftId`, `idempotencyKey`, status, timestamps and panel counters) and an embedded `panels` array. A panel stores its number, prompt, style, optional character reference data, status (`pending`, `running`, `succeeded`, or `failed`), attempt count and limit, plus result/error fields. While running or waiting for a retry it can also contain `leaseToken`, `leaseUntil`, or `nextAttemptAt`.
+
+Example (shortened internal MongoDB document):
+
+~~~json
+{
+  "_id": "<ObjectId>",
+  "userId": "<user-id>",
+  "comicId": "<comic-id-or-null>",
+  "draftId": "<draft-id-or-null>",
+  "idempotencyKey": "<key-or-null>",
+  "status": "running",
+  "totalPanels": 6,
+  "completedPanels": 2,
+  "panels": [
+    { "panelNumber": 0, "prompt": "...", "style": "anime", "status": "succeeded", "attempts": 1, "imageUrl": "https://..." },
+    { "panelNumber": 1, "prompt": "...", "style": "anime", "status": "running", "attempts": 2, "leaseToken": "<worker-token>", "leaseUntil": "<date>" },
+    { "panelNumber": 2, "prompt": "...", "style": "anime", "status": "pending", "attempts": 1, "nextAttemptAt": "<date>", "error": "..." }
+  ],
+  "createdAt": "<date>",
+  "startedAt": "<date>"
+}
+~~~
+
+Workers poll every 500 ms and default to two concurrent panel tasks (`PANEL_WORKER_CONCURRENCY` changes that). A worker claims the oldest eligible panel with MongoDB `findOneAndUpdate`: eligible means a due pending panel, or a running panel whose lease expired, with fewer than three attempts. The same atomic update marks the panel running, increments its attempt count, records a random lease token and sets a 15-minute lease. The token is checked on result writes, so a worker whose claim has been superseded cannot overwrite the current worker's result.
+
+The worker heartbeats every 60 seconds and extends the lease. A crash stops the heartbeat; when the lease expires, another poll can reclaim the panel if attempts remain. Rendering failures are rescheduled as pending with exponential backoff: the default base is five seconds (then ten seconds); `PANEL_RETRY_DELAY_MS` changes the base. After the third attempt, a rendering failure marks the panel failed immediately. If the worker crashes during that last attempt, the recovery sweep marks it failed after its lease expires. Once every panel is terminal, the parent job is `succeeded` if all succeeded, `partial` if some succeeded, and `failed` if none succeeded.
+
+An idempotency key is unique per user through a partial unique index on `(userId, idempotencyKey)`, so simultaneous duplicate submissions reuse the existing job. The SSE route reads current state from MongoDB every second and sends a snapshot immediately when connected; reconnecting therefore starts from current persisted state. Closing a browser connection does not cancel the worker. Lease tokens are internal and are not included in job/SSE responses. The worker runs inline by default, or can run separately with `WORKER_INLINE=false` and `npm run worker`.
 ### Drafts, ratings, and comments
 
 | Method | Path | Purpose |

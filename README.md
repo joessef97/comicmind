@@ -43,6 +43,38 @@ GET /api/jobs/:id/events (SSE)  ← progress updates
 
 Panels are handled independently, so a problem with one panel does not discard successful panels. Failed panels can be retried without regenerating the entire comic. Generation state lives in MongoDB, so the browser can reconnect to a job and read its latest progress.
 
+### How the MongoDB queue works
+
+This is a MongoDB-backed polling queue, not BullMQ or Redis. A generation job is one `GenerationJob` document. It holds the job metadata and an embedded `panels` array, so a worker can claim or update a panel with a single MongoDB document operation. A representative document (shortened) looks like this:
+
+```json
+{
+  "_id": "<ObjectId>",
+  "userId": "<user-id>",
+  "comicId": "<comic-id-or-null>",
+  "draftId": "<draft-id-or-null>",
+  "idempotencyKey": "<key-or-null>",
+  "status": "running",
+  "totalPanels": 6,
+  "completedPanels": 2,
+  "panels": [
+    { "panelNumber": 0, "prompt": "...", "style": "anime", "status": "succeeded", "attempts": 1, "imageUrl": "https://..." },
+    { "panelNumber": 1, "prompt": "...", "style": "anime", "status": "running", "attempts": 2, "leaseToken": "<worker-token>", "leaseUntil": "<date>" },
+    { "panelNumber": 2, "prompt": "...", "style": "anime", "status": "pending", "attempts": 1, "nextAttemptAt": "<date>", "error": "..." }
+  ],
+  "createdAt": "<date>",
+  "startedAt": "<date>"
+}
+```
+
+Each panel also supports `characterSheet`, `characterRefUrl`, `maxAttempts`, and its final `error` or `imageUrl`. Lease and retry fields are worker bookkeeping stored in MongoDB; the job read/SSE responses expose progress and panel results, not the lease token.
+
+Workers poll MongoDB every 500 ms (default concurrency: two panels). To claim work, each worker generates a random lease token and calls `findOneAndUpdate` for the oldest queued/running job with a due `pending` panel, or a `running` panel whose lease has expired. The atomic update changes that panel to `running`, increments `attempts`, writes the token and a 15-minute `leaseUntil`, and marks the parent job running. Because the claim and state change happen in one MongoDB operation, competing workers cannot both claim the same panel.
+
+While rendering, a worker extends its lease every 60 seconds. If the process crashes, those heartbeats stop; after the 15-minute lease expires, a poller can reclaim the panel. Each claim counts as an attempt, up to three. A normal rendering error returns the panel to `pending` with exponential backoff (5 seconds by default, then 10 seconds; set `PANEL_RETRY_DELAY_MS` to change the base). An expired lease can likewise be reclaimed while attempts remain. If the final attempt's lease expires, the recovery sweep marks that panel failed. The job becomes `succeeded` when all panels succeed, `partial` when some succeed, or `failed` when none succeed.
+
+The unique partial index on `(userId, idempotencyKey)` prevents a repeated request from creating a second job for the same user and key. The SSE endpoint reads the MongoDB snapshot once per second and immediately sends the current state on connect, so reconnecting clients catch up; disconnecting only closes that event stream and does not cancel generation. By default the worker runs in the API process; set `WORKER_INLINE=false` and run `npm run worker` to operate it as a separate process.
+
 ## Architecture
 
 Single TypeScript monorepo, one `package.json`, shared types across the wire:
